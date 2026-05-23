@@ -1,91 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../../core/models/business_models.dart';
+import '../../services/app_data_service.dart';
 
-class NearbyStationMapScreen extends StatelessWidget {
+class NearbyStationMapScreen extends StatefulWidget {
   const NearbyStationMapScreen({super.key});
 
-  static const _stations = [
-    _Station(
-      name: '清河村中心驿站',
-      address: '清河村村委会旁 20 米',
-      distance: '0.6km',
-      point: LatLng(30.5100, 114.3100),
-    ),
-    _Station(
-      name: '村口便民寄取点',
-      address: '清河村村口小卖部',
-      distance: '1.2km',
-      point: LatLng(30.5180, 114.3190),
-    ),
-    _Station(
-      name: '卫生室临时取件点',
-      address: '清河村卫生室对面',
-      distance: '1.8km',
-      point: LatLng(30.5030, 114.3020),
-    ),
-  ];
+  @override
+  State<NearbyStationMapScreen> createState() => _NearbyStationMapScreenState();
+}
+
+class _NearbyStationMapScreenState extends State<NearbyStationMapScreen> {
+  final _appDataService = AppDataService();
+  List<StationVO> _stations = const [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStations();
+  }
+
+  Future<void> _loadStations() async {
+    final result = await _appDataService.getNearbyStations();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _stations = result.data ?? const [];
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final center = _stations.isEmpty
+        ? const LatLng(30.5100, 114.3100)
+        : LatLng(_stations.first.lat, _stations.first.lng);
+
     return Scaffold(
       appBar: AppBar(title: const Text('附近驿站')),
-      body: Stack(
-        children: [
-          FlutterMap(
-            options: const MapOptions(
-              initialCenter: LatLng(30.5100, 114.3100),
-              initialZoom: 14,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
+              children: [
+                FlutterMap(
+                  options: MapOptions(initialCenter: center, initialZoom: 14),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.group13.mobile',
+                    ),
+                    MarkerLayer(
+                      markers: _stations
+                          .map(
+                            (station) => Marker(
+                              point: LatLng(station.lat, station.lng),
+                              width: 54,
+                              height: 54,
+                              child: _StationMarker(station: station),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16 + MediaQuery.of(context).padding.bottom,
+                  child: _StationListCard(stations: _stations),
+                ),
+              ],
             ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.group13.mobile',
-              ),
-              MarkerLayer(
-                markers: _stations
-                    .map(
-                      (station) => Marker(
-                        point: station.point,
-                        width: 54,
-                        height: 54,
-                        child: _StationMarker(station: station),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 16 + MediaQuery.of(context).padding.bottom,
-            child: _StationListCard(stations: _stations),
-          ),
-        ],
-      ),
     );
   }
-}
-
-class _Station {
-  const _Station({
-    required this.name,
-    required this.address,
-    required this.distance,
-    required this.point,
-  });
-
-  final String name;
-  final String address;
-  final String distance;
-  final LatLng point;
 }
 
 class _StationMarker extends StatelessWidget {
   const _StationMarker({required this.station});
 
-  final _Station station;
+  final StationVO station;
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +104,7 @@ class _StationMarker extends StatelessWidget {
 class _StationListCard extends StatelessWidget {
   const _StationListCard({required this.stations});
 
-  final List<_Station> stations;
+  final List<StationVO> stations;
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +158,7 @@ class _StationListCard extends StatelessWidget {
 class _StationListItem extends StatelessWidget {
   const _StationListItem({required this.station});
 
-  final _Station station;
+  final StationVO station;
 
   @override
   Widget build(BuildContext context) {

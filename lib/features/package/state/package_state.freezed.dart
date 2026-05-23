@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$VillagePackage {
 
- String get id; String get orderCode; String get pickupCode; String get name; String get sender; String get receiver; String get address; int get reward; PackageStatus get status; List<String> get timeline; String? get courier; double get lat; double get lng;
+ String get id; String get pickupCode; String get name; String get sender; String get receiver; String get address; int get reward; PackageStatus get status; List<String> get timeline; String? get courier; double get lat; double get lng;
 /// Create a copy of VillagePackage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $VillagePackageCopyWith<VillagePackage> get copyWith => _$VillagePackageCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is VillagePackage&&(identical(other.id, id) || other.id == id)&&(identical(other.orderCode, orderCode) || other.orderCode == orderCode)&&(identical(other.pickupCode, pickupCode) || other.pickupCode == pickupCode)&&(identical(other.name, name) || other.name == name)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.receiver, receiver) || other.receiver == receiver)&&(identical(other.address, address) || other.address == address)&&(identical(other.reward, reward) || other.reward == reward)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.timeline, timeline)&&(identical(other.courier, courier) || other.courier == courier)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is VillagePackage&&(identical(other.id, id) || other.id == id)&&(identical(other.pickupCode, pickupCode) || other.pickupCode == pickupCode)&&(identical(other.name, name) || other.name == name)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.receiver, receiver) || other.receiver == receiver)&&(identical(other.address, address) || other.address == address)&&(identical(other.reward, reward) || other.reward == reward)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.timeline, timeline)&&(identical(other.courier, courier) || other.courier == courier)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,orderCode,pickupCode,name,sender,receiver,address,reward,status,const DeepCollectionEquality().hash(timeline),courier,lat,lng);
+int get hashCode => Object.hash(runtimeType,id,pickupCode,name,sender,receiver,address,reward,status,const DeepCollectionEquality().hash(timeline),courier,lat,lng);
 
 @override
 String toString() {
-  return 'VillagePackage(id: $id, orderCode: $orderCode, pickupCode: $pickupCode, name: $name, sender: $sender, receiver: $receiver, address: $address, reward: $reward, status: $status, timeline: $timeline, courier: $courier, lat: $lat, lng: $lng)';
+  return 'VillagePackage(id: $id, pickupCode: $pickupCode, name: $name, sender: $sender, receiver: $receiver, address: $address, reward: $reward, status: $status, timeline: $timeline, courier: $courier, lat: $lat, lng: $lng)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $VillagePackageCopyWith<$Res>  {
   factory $VillagePackageCopyWith(VillagePackage value, $Res Function(VillagePackage) _then) = _$VillagePackageCopyWithImpl;
 @useResult
 $Res call({
- String id, String orderCode, String pickupCode, String name, String sender, String receiver, String address, int reward, PackageStatus status, List<String> timeline, String? courier, double lat, double lng
+ String id, String pickupCode, String name, String sender, String receiver, String address, int reward, PackageStatus status, List<String> timeline, String? courier, double lat, double lng
 });
 
 
@@ -62,10 +62,9 @@ class _$VillagePackageCopyWithImpl<$Res>
 
 /// Create a copy of VillagePackage
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? orderCode = null,Object? pickupCode = null,Object? name = null,Object? sender = null,Object? receiver = null,Object? address = null,Object? reward = null,Object? status = null,Object? timeline = null,Object? courier = freezed,Object? lat = null,Object? lng = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? pickupCode = null,Object? name = null,Object? sender = null,Object? receiver = null,Object? address = null,Object? reward = null,Object? status = null,Object? timeline = null,Object? courier = freezed,Object? lat = null,Object? lng = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,orderCode: null == orderCode ? _self.orderCode : orderCode // ignore: cast_nullable_to_non_nullable
 as String,pickupCode: null == pickupCode ? _self.pickupCode : pickupCode // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
@@ -162,10 +161,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String orderCode,  String pickupCode,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String pickupCode,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _VillagePackage() when $default != null:
-return $default(_that.id,_that.orderCode,_that.pickupCode,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
+return $default(_that.id,_that.pickupCode,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
   return orElse();
 
 }
@@ -183,10 +182,10 @@ return $default(_that.id,_that.orderCode,_that.pickupCode,_that.name,_that.sende
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String orderCode,  String pickupCode,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String pickupCode,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)  $default,) {final _that = this;
 switch (_that) {
 case _VillagePackage():
-return $default(_that.id,_that.orderCode,_that.pickupCode,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
+return $default(_that.id,_that.pickupCode,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +202,10 @@ return $default(_that.id,_that.orderCode,_that.pickupCode,_that.name,_that.sende
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String orderCode,  String pickupCode,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String pickupCode,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)?  $default,) {final _that = this;
 switch (_that) {
 case _VillagePackage() when $default != null:
-return $default(_that.id,_that.orderCode,_that.pickupCode,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
+return $default(_that.id,_that.pickupCode,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
   return null;
 
 }
@@ -218,11 +217,10 @@ return $default(_that.id,_that.orderCode,_that.pickupCode,_that.name,_that.sende
 
 
 class _VillagePackage implements VillagePackage {
-  const _VillagePackage({required this.id, required this.orderCode, required this.pickupCode, required this.name, required this.sender, required this.receiver, required this.address, required this.reward, required this.status, required final  List<String> timeline, this.courier, required this.lat, required this.lng}): _timeline = timeline;
+  const _VillagePackage({required this.id, required this.pickupCode, required this.name, required this.sender, required this.receiver, required this.address, required this.reward, required this.status, required final  List<String> timeline, this.courier, required this.lat, required this.lng}): _timeline = timeline;
   
 
 @override final  String id;
-@override final  String orderCode;
 @override final  String pickupCode;
 @override final  String name;
 @override final  String sender;
@@ -251,16 +249,16 @@ _$VillagePackageCopyWith<_VillagePackage> get copyWith => __$VillagePackageCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _VillagePackage&&(identical(other.id, id) || other.id == id)&&(identical(other.orderCode, orderCode) || other.orderCode == orderCode)&&(identical(other.pickupCode, pickupCode) || other.pickupCode == pickupCode)&&(identical(other.name, name) || other.name == name)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.receiver, receiver) || other.receiver == receiver)&&(identical(other.address, address) || other.address == address)&&(identical(other.reward, reward) || other.reward == reward)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._timeline, _timeline)&&(identical(other.courier, courier) || other.courier == courier)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _VillagePackage&&(identical(other.id, id) || other.id == id)&&(identical(other.pickupCode, pickupCode) || other.pickupCode == pickupCode)&&(identical(other.name, name) || other.name == name)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.receiver, receiver) || other.receiver == receiver)&&(identical(other.address, address) || other.address == address)&&(identical(other.reward, reward) || other.reward == reward)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._timeline, _timeline)&&(identical(other.courier, courier) || other.courier == courier)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,orderCode,pickupCode,name,sender,receiver,address,reward,status,const DeepCollectionEquality().hash(_timeline),courier,lat,lng);
+int get hashCode => Object.hash(runtimeType,id,pickupCode,name,sender,receiver,address,reward,status,const DeepCollectionEquality().hash(_timeline),courier,lat,lng);
 
 @override
 String toString() {
-  return 'VillagePackage(id: $id, orderCode: $orderCode, pickupCode: $pickupCode, name: $name, sender: $sender, receiver: $receiver, address: $address, reward: $reward, status: $status, timeline: $timeline, courier: $courier, lat: $lat, lng: $lng)';
+  return 'VillagePackage(id: $id, pickupCode: $pickupCode, name: $name, sender: $sender, receiver: $receiver, address: $address, reward: $reward, status: $status, timeline: $timeline, courier: $courier, lat: $lat, lng: $lng)';
 }
 
 
@@ -271,7 +269,7 @@ abstract mixin class _$VillagePackageCopyWith<$Res> implements $VillagePackageCo
   factory _$VillagePackageCopyWith(_VillagePackage value, $Res Function(_VillagePackage) _then) = __$VillagePackageCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String orderCode, String pickupCode, String name, String sender, String receiver, String address, int reward, PackageStatus status, List<String> timeline, String? courier, double lat, double lng
+ String id, String pickupCode, String name, String sender, String receiver, String address, int reward, PackageStatus status, List<String> timeline, String? courier, double lat, double lng
 });
 
 
@@ -288,10 +286,9 @@ class __$VillagePackageCopyWithImpl<$Res>
 
 /// Create a copy of VillagePackage
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? orderCode = null,Object? pickupCode = null,Object? name = null,Object? sender = null,Object? receiver = null,Object? address = null,Object? reward = null,Object? status = null,Object? timeline = null,Object? courier = freezed,Object? lat = null,Object? lng = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? pickupCode = null,Object? name = null,Object? sender = null,Object? receiver = null,Object? address = null,Object? reward = null,Object? status = null,Object? timeline = null,Object? courier = freezed,Object? lat = null,Object? lng = null,}) {
   return _then(_VillagePackage(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,orderCode: null == orderCode ? _self.orderCode : orderCode // ignore: cast_nullable_to_non_nullable
 as String,pickupCode: null == pickupCode ? _self.pickupCode : pickupCode // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
@@ -313,7 +310,7 @@ as double,
 /// @nodoc
 mixin _$PackageState {
 
- List<VillagePackage> get packages; int get nextPackageNo;
+ List<VillagePackage> get packages; bool get isLoading; bool get isFallbackData; String? get message;
 /// Create a copy of PackageState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -324,16 +321,16 @@ $PackageStateCopyWith<PackageState> get copyWith => _$PackageStateCopyWithImpl<P
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PackageState&&const DeepCollectionEquality().equals(other.packages, packages)&&(identical(other.nextPackageNo, nextPackageNo) || other.nextPackageNo == nextPackageNo));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PackageState&&const DeepCollectionEquality().equals(other.packages, packages)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isFallbackData, isFallbackData) || other.isFallbackData == isFallbackData)&&(identical(other.message, message) || other.message == message));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(packages),nextPackageNo);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(packages),isLoading,isFallbackData,message);
 
 @override
 String toString() {
-  return 'PackageState(packages: $packages, nextPackageNo: $nextPackageNo)';
+  return 'PackageState(packages: $packages, isLoading: $isLoading, isFallbackData: $isFallbackData, message: $message)';
 }
 
 
@@ -344,7 +341,7 @@ abstract mixin class $PackageStateCopyWith<$Res>  {
   factory $PackageStateCopyWith(PackageState value, $Res Function(PackageState) _then) = _$PackageStateCopyWithImpl;
 @useResult
 $Res call({
- List<VillagePackage> packages, int nextPackageNo
+ List<VillagePackage> packages, bool isLoading, bool isFallbackData, String? message
 });
 
 
@@ -361,11 +358,13 @@ class _$PackageStateCopyWithImpl<$Res>
 
 /// Create a copy of PackageState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? packages = null,Object? nextPackageNo = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? packages = null,Object? isLoading = null,Object? isFallbackData = null,Object? message = freezed,}) {
   return _then(_self.copyWith(
 packages: null == packages ? _self.packages : packages // ignore: cast_nullable_to_non_nullable
-as List<VillagePackage>,nextPackageNo: null == nextPackageNo ? _self.nextPackageNo : nextPackageNo // ignore: cast_nullable_to_non_nullable
-as int,
+as List<VillagePackage>,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
+as bool,isFallbackData: null == isFallbackData ? _self.isFallbackData : isFallbackData // ignore: cast_nullable_to_non_nullable
+as bool,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -450,10 +449,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<VillagePackage> packages,  int nextPackageNo)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<VillagePackage> packages,  bool isLoading,  bool isFallbackData,  String? message)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PackageState() when $default != null:
-return $default(_that.packages,_that.nextPackageNo);case _:
+return $default(_that.packages,_that.isLoading,_that.isFallbackData,_that.message);case _:
   return orElse();
 
 }
@@ -471,10 +470,10 @@ return $default(_that.packages,_that.nextPackageNo);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<VillagePackage> packages,  int nextPackageNo)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<VillagePackage> packages,  bool isLoading,  bool isFallbackData,  String? message)  $default,) {final _that = this;
 switch (_that) {
 case _PackageState():
-return $default(_that.packages,_that.nextPackageNo);case _:
+return $default(_that.packages,_that.isLoading,_that.isFallbackData,_that.message);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -491,10 +490,10 @@ return $default(_that.packages,_that.nextPackageNo);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<VillagePackage> packages,  int nextPackageNo)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<VillagePackage> packages,  bool isLoading,  bool isFallbackData,  String? message)?  $default,) {final _that = this;
 switch (_that) {
 case _PackageState() when $default != null:
-return $default(_that.packages,_that.nextPackageNo);case _:
+return $default(_that.packages,_that.isLoading,_that.isFallbackData,_that.message);case _:
   return null;
 
 }
@@ -506,7 +505,7 @@ return $default(_that.packages,_that.nextPackageNo);case _:
 
 
 class _PackageState implements PackageState {
-  const _PackageState({final  List<VillagePackage> packages = const [], this.nextPackageNo = 4}): _packages = packages;
+  const _PackageState({final  List<VillagePackage> packages = const [], this.isLoading = false, this.isFallbackData = false, this.message}): _packages = packages;
   
 
  final  List<VillagePackage> _packages;
@@ -516,7 +515,9 @@ class _PackageState implements PackageState {
   return EqualUnmodifiableListView(_packages);
 }
 
-@override@JsonKey() final  int nextPackageNo;
+@override@JsonKey() final  bool isLoading;
+@override@JsonKey() final  bool isFallbackData;
+@override final  String? message;
 
 /// Create a copy of PackageState
 /// with the given fields replaced by the non-null parameter values.
@@ -528,16 +529,16 @@ _$PackageStateCopyWith<_PackageState> get copyWith => __$PackageStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PackageState&&const DeepCollectionEquality().equals(other._packages, _packages)&&(identical(other.nextPackageNo, nextPackageNo) || other.nextPackageNo == nextPackageNo));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PackageState&&const DeepCollectionEquality().equals(other._packages, _packages)&&(identical(other.isLoading, isLoading) || other.isLoading == isLoading)&&(identical(other.isFallbackData, isFallbackData) || other.isFallbackData == isFallbackData)&&(identical(other.message, message) || other.message == message));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_packages),nextPackageNo);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_packages),isLoading,isFallbackData,message);
 
 @override
 String toString() {
-  return 'PackageState(packages: $packages, nextPackageNo: $nextPackageNo)';
+  return 'PackageState(packages: $packages, isLoading: $isLoading, isFallbackData: $isFallbackData, message: $message)';
 }
 
 
@@ -548,7 +549,7 @@ abstract mixin class _$PackageStateCopyWith<$Res> implements $PackageStateCopyWi
   factory _$PackageStateCopyWith(_PackageState value, $Res Function(_PackageState) _then) = __$PackageStateCopyWithImpl;
 @override @useResult
 $Res call({
- List<VillagePackage> packages, int nextPackageNo
+ List<VillagePackage> packages, bool isLoading, bool isFallbackData, String? message
 });
 
 
@@ -565,11 +566,13 @@ class __$PackageStateCopyWithImpl<$Res>
 
 /// Create a copy of PackageState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? packages = null,Object? nextPackageNo = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? packages = null,Object? isLoading = null,Object? isFallbackData = null,Object? message = freezed,}) {
   return _then(_PackageState(
 packages: null == packages ? _self._packages : packages // ignore: cast_nullable_to_non_nullable
-as List<VillagePackage>,nextPackageNo: null == nextPackageNo ? _self.nextPackageNo : nextPackageNo // ignore: cast_nullable_to_non_nullable
-as int,
+as List<VillagePackage>,isLoading: null == isLoading ? _self.isLoading : isLoading // ignore: cast_nullable_to_non_nullable
+as bool,isFallbackData: null == isFallbackData ? _self.isFallbackData : isFallbackData // ignore: cast_nullable_to_non_nullable
+as bool,message: freezed == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

@@ -22,7 +22,6 @@ class PackageCard extends StatelessWidget {
       PackageStatus.inStock => const Color(0xFF1677FF),
       PackageStatus.taskPublished => const Color(0xFFFF8C00),
       PackageStatus.assigned => const Color(0xFF4CAF50),
-      PackageStatus.readyForPickup => const Color(0xFFFF6B35),
       PackageStatus.completed => const Color(0xFF8BC34A),
     };
   }
@@ -33,7 +32,6 @@ class PackageCard extends StatelessWidget {
       PackageStatus.inStock => Icons.warehouse_rounded,
       PackageStatus.taskPublished => Icons.campaign_rounded,
       PackageStatus.assigned => Icons.local_shipping_rounded,
-      PackageStatus.readyForPickup => Icons.markunread_mailbox_rounded,
       PackageStatus.completed => Icons.check_circle_rounded,
     };
   }
@@ -111,16 +109,7 @@ class PackageCard extends StatelessWidget {
                                 fontSize: 12,
                               ),
                             ),
-                            Text(
-                              '订单号 ${package.orderCode}',
-                              style: const TextStyle(
-                                color: Color(0xFFFF8C00),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            if (package.status == PackageStatus.assigned ||
-                                package.status == PackageStatus.readyForPickup)
+                            if (package.status == PackageStatus.assigned)
                               Text(
                                 '取件码 ${package.pickupCode}',
                                 style: const TextStyle(

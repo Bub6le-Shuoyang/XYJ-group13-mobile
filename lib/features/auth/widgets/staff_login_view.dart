@@ -14,27 +14,53 @@ class StaffLoginView extends StatefulWidget {
 }
 
 class _StaffLoginViewState extends State<StaffLoginView> {
-  final _emailController = TextEditingController(text: 'admin@example.com');
+  final _accountController = TextEditingController(text: 'admin@example.com');
   final _passwordController = TextEditingController(text: 'MyPass123!');
+  AppRole _selectedRole = AppRole.admin;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _accountController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleAdminLogin(BuildContext context) async {
-    final email = _emailController.text.trim();
+  void _selectRole(AppRole role) {
+    setState(() {
+      _selectedRole = role;
+      _accountController.text = role == AppRole.admin
+          ? 'admin@example.com'
+          : 'courier@example.com';
+      _passwordController.text = role == AppRole.admin
+          ? 'MyPass123!'
+          : '123456';
+    });
+  }
+
+  Future<void> _handleStaffLogin(BuildContext context) async {
+    final account = _accountController.text.trim();
     final password = _passwordController.text.trim();
+    if (account.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入账号和密码')));
+      return;
+    }
 
     try {
-      await context.read<AuthCubit>().loginAsAdmin(email, password);
+      await context.read<AuthCubit>().loginAsStaff(
+        _selectedRole,
+        account,
+        password,
+      );
       if (context.mounted) {
-        final user = context.read<AuthCubit>().state.user;
+        final userEmail = context.read<AuthCubit>().state.user?.email;
+        final loginName = userEmail == null || userEmail.isEmpty
+            ? _selectedRole.title
+            : userEmail;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('登录成功: ${user?.email ?? ''}')));
+        ).showSnackBar(SnackBar(content: Text('登录成功: $loginName')));
       }
     } catch (e) {
       if (context.mounted) {
@@ -46,7 +72,7 @@ class _StaffLoginViewState extends State<StaffLoginView> {
             ),
             title: const Text('网络请求失败'),
             content: Text(
-              '接口调用失败 (这很正常，因为后端地址还没配)：\n${e.toString()}\n\n是否直接进入演示模式？',
+              '当前 ${_selectedRole.title} 登录接口暂不可用：\n${e.toString()}\n\n是否使用演示模式进入？',
             ),
             actions: [
               TextButton(
@@ -57,9 +83,9 @@ class _StaffLoginViewState extends State<StaffLoginView> {
                 key: const ValueKey('force_login_button'),
                 onPressed: () {
                   Navigator.pop(dialogContext);
-                  widget.onForceLogin(AppRole.admin);
+                  widget.onForceLogin(_selectedRole);
                 },
-                child: const Text('强制进入'),
+                child: const Text('进入演示模式'),
               ),
             ],
           ),
@@ -100,24 +126,44 @@ class _StaffLoginViewState extends State<StaffLoginView> {
                   ),
                   const SizedBox(width: 10),
                   const Text(
-                    '管理员登录',
+                    '工作人员登录',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _StaffRoleSelector(
+                      role: AppRole.admin,
+                      selected: _selectedRole == AppRole.admin,
+                      onTap: () => _selectRole(AppRole.admin),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _StaffRoleSelector(
+                      role: AppRole.courier,
+                      selected: _selectedRole == AppRole.courier,
+                      onTap: () => _selectRole(AppRole.courier),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
               TextField(
-                key: const ValueKey('admin_email_field'),
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  hintText: '请输入管理员邮箱',
-                  prefixIcon: Icon(Icons.email_outlined, size: 20),
+                key: const ValueKey('staff_account_field'),
+                controller: _accountController,
+                decoration: InputDecoration(
+                  hintText: '请输入${_selectedRole.title}账号',
+                  prefixIcon: const Icon(Icons.badge_outlined, size: 20),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 14),
               TextField(
-                key: const ValueKey('admin_password_field'),
+                key: const ValueKey('staff_password_field'),
                 controller: _passwordController,
                 obscureText: true,
                 decoration: const InputDecoration(
@@ -129,12 +175,12 @@ class _StaffLoginViewState extends State<StaffLoginView> {
               BlocBuilder<AuthCubit, AuthState>(
                 builder: (context, state) {
                   return FilledButton(
-                    key: const ValueKey('admin_login_button'),
+                    key: const ValueKey('staff_login_button'),
                     onPressed: state.isLoading
                         ? null
-                        : () => _handleAdminLogin(context),
+                        : () => _handleStaffLogin(context),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF1677FF),
+                      backgroundColor: _selectedRole.color,
                       foregroundColor: Colors.white,
                     ),
                     child: state.isLoading
@@ -146,95 +192,85 @@ class _StaffLoginViewState extends State<StaffLoginView> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text('登 录'),
+                        : Text('登录${_selectedRole.title}'),
                   );
                 },
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        _RoleLoginCard(
-          role: AppRole.courier,
-          onTap: () => widget.onForceLogin(AppRole.courier),
-        ),
       ],
     );
   }
 }
 
-class _RoleLoginCard extends StatelessWidget {
-  const _RoleLoginCard({required this.role, required this.onTap});
+class _StaffRoleSelector extends StatelessWidget {
+  const _StaffRoleSelector({
+    required this.role,
+    required this.selected,
+    required this.onTap,
+  });
 
   final AppRole role;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+    return InkWell(
+      key: ValueKey('staff_role_${role.name}_button'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected ? role.color.withValues(alpha: 0.1) : Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? role.color : const Color(0xFFEAEAEA),
+            width: selected ? 1.5 : 1,
           ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: ValueKey('role_login_card_${role.name}'),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: role.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(role.icon, color: role.color, size: 28),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: role.color.withValues(alpha: selected ? 0.16 : 0.08),
+                borderRadius: BorderRadius.circular(14),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      role.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      role.subtitle,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                    ),
-                  ],
-                ),
+              child: Icon(role.icon, color: role.color, size: 24),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              role.title,
+              style: TextStyle(
+                color: selected ? role.color : const Color(0xFF333333),
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
               ),
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 14,
-                  color: Colors.grey,
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              role.subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selected ? role.color : Colors.grey[500],
+                fontSize: 11,
+                height: 1.2,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: selected ? role.color : Colors.grey[400],
+              size: 18,
+            ),
+          ],
         ),
       ),
     );

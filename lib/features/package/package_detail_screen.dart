@@ -14,7 +14,6 @@ class PackageDetailScreen extends StatelessWidget {
       PackageStatus.inStock => const Color(0xFF1677FF),
       PackageStatus.taskPublished => const Color(0xFFFF8C00),
       PackageStatus.assigned => const Color(0xFF4CAF50),
-      PackageStatus.readyForPickup => const Color(0xFFFF6B35),
       PackageStatus.completed => const Color(0xFF8BC34A),
     };
   }
@@ -154,12 +153,10 @@ class PackageDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       _InfoRow(label: '单号', value: package.id),
-                      _InfoRow(label: '寄件订单号', value: package.orderCode),
-                      if (package.status == PackageStatus.assigned ||
-                          package.status == PackageStatus.readyForPickup)
+                      if (package.status == PackageStatus.assigned)
                         _InfoRow(label: '取件码', value: package.pickupCode),
                       _InfoRow(label: '名称', value: package.name),
-                      _InfoRow(label: '寄件人', value: package.sender),
+                      _InfoRow(label: '来源', value: package.sender),
                       _InfoRow(label: '收件人', value: package.receiver),
                       _InfoRow(label: '地址', value: package.address),
                       if (package.courier != null)

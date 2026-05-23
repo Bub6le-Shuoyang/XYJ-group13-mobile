@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../package/state/package_cubit.dart';
 import '../package/state/package_state.dart';
 import '../package/widgets/package_card.dart';
-import 'address_picker_screen.dart';
 import 'nearby_station_map_screen.dart';
 
 class VillagerDashboardScreen extends StatefulWidget {
@@ -15,108 +14,15 @@ class VillagerDashboardScreen extends StatefulWidget {
 }
 
 class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
-  final _nameController = TextEditingController();
-  final _receiverController = TextEditingController();
-  final _addressController = TextEditingController();
   final _scrollController = ScrollController();
   final _allPackagesKey = GlobalKey();
-  SelectedPickupAddress? _selectedAddress;
   String? _highlightedPackageId;
   int _highlightTick = 0;
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _receiverController.dispose();
-    _addressController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  String? _submitPackage() {
-    final name = _nameController.text.trim();
-    final receiver = _receiverController.text.trim();
-    final address = _addressController.text.trim();
-
-    if (name.isEmpty ||
-        receiver.isEmpty ||
-        address.isEmpty ||
-        _selectedAddress == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请完整填写寄件信息，并在地图上确认取件地址')));
-      return null;
-    }
-
-    final selectedAddress = _selectedAddress!;
-    final orderCode = context.read<PackageCubit>().addPackage(
-      name,
-      receiver,
-      address,
-      lat: selectedAddress.lat,
-      lng: selectedAddress.lng,
-    );
-    _nameController.clear();
-    _receiverController.clear();
-    _addressController.clear();
-    _selectedAddress = null;
-    return orderCode;
-  }
-
-  void _showSendDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) => _SendPackageSheet(
-            nameController: _nameController,
-            receiverController: _receiverController,
-            addressController: _addressController,
-            selectedAddress: _selectedAddress,
-            onSelectAddress: () async {
-              await _selectPickupAddress();
-              setSheetState(() {});
-            },
-            onSubmit: () {
-              final orderCode = _submitPackage();
-              if (orderCode == null) {
-                return;
-              }
-              Navigator.pop(context);
-              _showOrderCreatedDialog(orderCode);
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _selectPickupAddress() async {
-    final selected = await Navigator.push<SelectedPickupAddress>(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            AddressPickerScreen(initialAddress: _addressController.text.trim()),
-      ),
-    );
-
-    if (selected == null) {
-      return;
-    }
-
-    setState(() {
-      _selectedAddress = selected;
-      _addressController.text = selected.address;
-    });
-  }
-
-  void _showOrderCreatedDialog(String orderCode) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => _OrderCreatedDialog(orderCode: orderCode),
-    );
   }
 
   void _showPickupCodeSheet() {
@@ -154,7 +60,6 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
     VillagePackage? matchedPackage;
     for (final package in context.read<PackageCubit>().state.packages) {
       if (package.id.toUpperCase() == normalizedKeyword ||
-          package.orderCode.toUpperCase() == normalizedKeyword ||
           package.pickupCode.toUpperCase() == normalizedKeyword) {
         matchedPackage = package;
         break;
@@ -167,7 +72,7 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('没有找到对应快递，请核对订单号')));
+      ).showSnackBar(const SnackBar(content: Text('没有找到对应快递，请核对包裹号或取件码')));
       return;
     }
 
@@ -224,7 +129,6 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
             _ServiceGrid(
-              onSendTap: _showSendDialog,
               onPickupCodeTap: _showPickupCodeSheet,
               onSearchTap: _showSearchPackageDialog,
               onStationTap: _openNearbyStations,
@@ -273,13 +177,11 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
 
 class _ServiceGrid extends StatelessWidget {
   const _ServiceGrid({
-    required this.onSendTap,
     required this.onPickupCodeTap,
     required this.onSearchTap,
     required this.onStationTap,
   });
 
-  final VoidCallback onSendTap;
   final VoidCallback onPickupCodeTap;
   final VoidCallback onSearchTap;
   final VoidCallback onStationTap;
@@ -302,13 +204,6 @@ class _ServiceGrid extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _ServiceItem(
-            icon: Icons.outbox_rounded,
-            label: '我要寄件',
-            color: const Color(0xFFFF8C00),
-            bgColor: const Color(0xFFFFF3E0),
-            onTap: onSendTap,
-          ),
           _ServiceItem(
             icon: Icons.qr_code_2_rounded,
             label: '我要取件',
@@ -480,7 +375,7 @@ class _PackageSearchDialog extends StatelessWidget {
         autofocus: true,
         textCapitalization: TextCapitalization.characters,
         decoration: const InputDecoration(
-          hintText: '输入包裹单号 / 寄件订单号 / 取件码',
+          hintText: '输入包裹单号 / 取件码',
           prefixIcon: Icon(Icons.search_rounded),
         ),
         onSubmitted: (value) => Navigator.pop(context, value),
@@ -727,193 +622,6 @@ class _PickupCodeEmpty extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SendPackageSheet extends StatelessWidget {
-  const _SendPackageSheet({
-    required this.nameController,
-    required this.receiverController,
-    required this.addressController,
-    required this.selectedAddress,
-    required this.onSelectAddress,
-    required this.onSubmit,
-  });
-
-  final TextEditingController nameController;
-  final TextEditingController receiverController;
-  final TextEditingController addressController;
-  final SelectedPickupAddress? selectedAddress;
-  final VoidCallback onSelectAddress;
-  final VoidCallback onSubmit;
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(24, 20, 24, 20 + bottomInset),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            '我要寄件',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            key: const ValueKey('package_name_field'),
-            controller: nameController,
-            decoration: const InputDecoration(
-              hintText: '包裹名称（如：农资工具箱）',
-              prefixIcon: Icon(Icons.inventory_2_outlined, size: 20),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const ValueKey('package_receiver_field'),
-            controller: receiverController,
-            decoration: const InputDecoration(
-              hintText: '收件人姓名',
-              prefixIcon: Icon(Icons.person_outline, size: 20),
-            ),
-          ),
-          const SizedBox(height: 12),
-          InkWell(
-            key: const ValueKey('package_address_field'),
-            onTap: onSelectAddress,
-            borderRadius: BorderRadius.circular(12),
-            child: IgnorePointer(
-              child: TextField(
-                controller: addressController,
-                decoration: InputDecoration(
-                  hintText: '点击使用地图输入并定位取件地址',
-                  prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
-                  suffixIcon: Icon(
-                    selectedAddress == null
-                        ? Icons.map_outlined
-                        : Icons.check_circle_rounded,
-                    color: selectedAddress == null
-                        ? Colors.grey
-                        : const Color(0xFF4CAF50),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (selectedAddress != null) ...[
-            const SizedBox(height: 8),
-            _SelectedAddressHint(address: selectedAddress!),
-          ],
-          const SizedBox(height: 24),
-          FilledButton(
-            key: const ValueKey('submit_package_button'),
-            onPressed: onSubmit,
-            child: const Text('确认寄件'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SelectedAddressHint extends StatelessWidget {
-  const _SelectedAddressHint({required this.address});
-
-  final SelectedPickupAddress address;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.my_location_rounded,
-            color: Color(0xFF4CAF50),
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '已定位：${address.lat.toStringAsFixed(4)}, ${address.lng.toStringAsFixed(4)}',
-              style: const TextStyle(color: Color(0xFF2E7D32), fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OrderCreatedDialog extends StatelessWidget {
-  const _OrderCreatedDialog({required this.orderCode});
-
-  final String orderCode;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('寄件订单已生成'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('请携带包裹前往驿站，并向管理员出示下面的订单号：'),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF3E0),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Text(
-              orderCode,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFFFF8C00),
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '管理员核验成功后，订单状态会从“待入库”变为“已入库”。',
-            style: TextStyle(color: Colors.grey[600], fontSize: 13),
-          ),
-        ],
-      ),
-      actions: [
-        FilledButton(
-          key: const ValueKey('order_created_confirm_button'),
-          onPressed: () => Navigator.pop(context),
-          child: const Text('我知道了'),
-        ),
-      ],
     );
   }
 }

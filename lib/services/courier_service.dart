@@ -1,6 +1,7 @@
 import '../core/models/result.dart';
 import '../core/models/business_models.dart';
 import '../core/network/api_client.dart';
+import 'mock_data.dart';
 
 class CourierService {
   final ApiClient _apiClient = ApiClient();
@@ -47,9 +48,34 @@ class CourierService {
 
   // 5. 查看收益
   Future<Result<EarningsVO>> getEarnings() async {
-    return _apiClient.get<EarningsVO>(
+    final result = await _apiClient.get<EarningsVO>(
       '/courier/earnings',
       fromJsonT: (data) => EarningsVO.fromJson(data),
+    );
+    if (result.isSuccess && result.data != null) {
+      return result;
+    }
+    return Result(
+      code: 200,
+      message: '收益接口失败，已使用模拟收益：${result.message}',
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      data: MockData.earnings,
+    );
+  }
+
+  Future<Result<CourierProfileVO>> getProfile() async {
+    final result = await _apiClient.get<CourierProfileVO>(
+      '/courier/profile',
+      fromJsonT: (data) => CourierProfileVO.fromJson(data),
+    );
+    if (result.isSuccess && result.data != null) {
+      return result;
+    }
+    return Result(
+      code: 200,
+      message: '骑手资料接口失败，已使用模拟资料：${result.message}',
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+      data: MockData.courierProfile,
     );
   }
 }

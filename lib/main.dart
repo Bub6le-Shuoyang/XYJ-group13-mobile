@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/models/app_role.dart';
 import 'services/auth_service.dart';
+import 'services/package_service.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/auth/state/auth_cubit.dart';
 import 'features/auth/state/auth_state.dart';
@@ -23,7 +24,7 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => AuthCubit(AuthService())),
-        BlocProvider(create: (_) => PackageCubit()),
+        BlocProvider(create: (_) => PackageCubit(PackageService())),
       ],
       child: MaterialApp(
         title: '乡村快递协同平台',

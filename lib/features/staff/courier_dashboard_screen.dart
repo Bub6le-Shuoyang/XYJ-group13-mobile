@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/models/business_models.dart';
+import '../../services/courier_service.dart';
 import '../package/state/package_cubit.dart';
 import '../package/state/package_state.dart';
 import '../package/widgets/package_card.dart';
@@ -82,9 +84,12 @@ class _CourierWorkPage extends StatelessWidget {
       return;
     }
 
-    final matchedPackage = context.read<PackageCubit>().verifyPickupCode(
+    final matchedPackage = await context.read<PackageCubit>().verifyPickupCode(
       normalizedCode,
     );
+    if (!context.mounted) {
+      return;
+    }
     if (matchedPackage == null) {
       ScaffoldMessenger.of(
         context,
@@ -244,10 +249,70 @@ class _CourierPickupCodeDialog extends StatelessWidget {
   }
 }
 
-class _CourierProfilePage extends StatelessWidget {
+class _CourierProfilePage extends StatefulWidget {
   const _CourierProfilePage({required this.packages});
 
   final List<VillagePackage> packages;
+
+  @override
+  State<_CourierProfilePage> createState() => _CourierProfilePageState();
+}
+
+class _CourierProfilePageState extends State<_CourierProfilePage> {
+  final _courierService = CourierService();
+  late Future<_CourierData> _courierDataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _courierDataFuture = _loadCourierData();
+  }
+
+  Future<_CourierData> _loadCourierData() async {
+    final profileResult = await _courierService.getProfile();
+    final earningsResult = await _courierService.getEarnings();
+    return _CourierData(
+      profile: profileResult.data!,
+      earnings: earningsResult.data!,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_CourierData>(
+      future: _courierDataFuture,
+      builder: (context, snapshot) {
+        final data = snapshot.data;
+        if (data == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return _CourierProfileContent(
+          packages: widget.packages,
+          profile: data.profile,
+          earnings: data.earnings,
+        );
+      },
+    );
+  }
+}
+
+class _CourierData {
+  const _CourierData({required this.profile, required this.earnings});
+
+  final CourierProfileVO profile;
+  final EarningsVO earnings;
+}
+
+class _CourierProfileContent extends StatelessWidget {
+  const _CourierProfileContent({
+    required this.packages,
+    required this.profile,
+    required this.earnings,
+  });
+
+  final List<VillagePackage> packages;
+  final CourierProfileVO profile;
+  final EarningsVO earnings;
 
   @override
   Widget build(BuildContext context) {
@@ -257,13 +322,14 @@ class _CourierProfilePage extends StatelessWidget {
     final deliveringCount = packages
         .where((p) => p.status == PackageStatus.assigned)
         .length;
-    final todayIncome = deliveringCount * 8 + 36;
-    final totalIncome = 2860 + completedCount * 12;
+    final todayIncome = (earnings.todayEarnings + deliveringCount * 8).round();
+    final totalIncome = (earnings.totalEarnings + completedCount * 12).round();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
         _CourierProfileHeader(
+          profile: profile,
           totalIncome: totalIncome,
           todayIncome: todayIncome,
         ),
@@ -283,7 +349,7 @@ class _CourierProfilePage extends StatelessWidget {
               child: _StatCard(
                 icon: Icons.task_alt_rounded,
                 label: '已完成',
-                value: '${48 + completedCount}',
+                value: '${earnings.completedOrders + completedCount}',
                 color: const Color(0xFF1677FF),
               ),
             ),
@@ -292,29 +358,29 @@ class _CourierProfilePage extends StatelessWidget {
         const SizedBox(height: 16),
         _CourierInfoGroup(
           title: '基础信息',
-          items: const [
+          items: [
             _CourierInfoItem(
               icon: Icons.badge_rounded,
               label: '配送员编号',
-              value: 'COURIER-013',
-              color: Color(0xFFFF8C00),
+              value: profile.courierNo,
+              color: const Color(0xFFFF8C00),
             ),
             _CourierInfoItem(
               icon: Icons.phone_rounded,
               label: '联系电话',
-              value: '138****1313',
-              color: Color(0xFF4CAF50),
+              value: profile.phone,
+              color: const Color(0xFF4CAF50),
             ),
             _CourierInfoItem(
               icon: Icons.store_rounded,
               label: '服务站点',
-              value: '清河村中心驿站',
-              color: Color(0xFF1677FF),
+              value: profile.stationName,
+              color: const Color(0xFF1677FF),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        _CourierLevelCard(),
+        _CourierLevelCard(profile: profile),
         const SizedBox(height: 16),
         _CourierInfoGroup(
           title: '收益明细',
@@ -331,11 +397,11 @@ class _CourierProfilePage extends StatelessWidget {
               value: '¥$totalIncome',
               color: const Color(0xFF4CAF50),
             ),
-            const _CourierInfoItem(
+            _CourierInfoItem(
               icon: Icons.trending_up_rounded,
               label: '本月排名',
-              value: '第 3 名',
-              color: Color(0xFF9C27B0),
+              value: '第 ${profile.monthlyRank} 名',
+              color: const Color(0xFF9C27B0),
             ),
           ],
         ),
@@ -346,10 +412,12 @@ class _CourierProfilePage extends StatelessWidget {
 
 class _CourierProfileHeader extends StatelessWidget {
   const _CourierProfileHeader({
+    required this.profile,
     required this.totalIncome,
     required this.todayIncome,
   });
 
+  final CourierProfileVO profile;
   final int totalIncome;
   final int todayIncome;
 
@@ -384,22 +452,25 @@ class _CourierProfileHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '张师傅',
-                      style: TextStyle(
+                      profile.name,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      '金牌配送员 · 已实名认证',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                      '${profile.levelName} · 已实名认证',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -547,8 +618,13 @@ class _CourierInfoItem extends StatelessWidget {
 }
 
 class _CourierLevelCard extends StatelessWidget {
+  const _CourierLevelCard({required this.profile});
+
+  final CourierProfileVO profile;
+
   @override
   Widget build(BuildContext context) {
+    final progress = profile.levelProgress.clamp(0, 1).toDouble();
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -573,28 +649,28 @@ class _CourierLevelCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       '配送等级',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
-                      '金牌配送员 Lv.4',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                      profile.levelName,
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                   ],
                 ),
               ),
-              const Text(
-                '88%',
-                style: TextStyle(
+              Text(
+                '${(progress * 100).round()}%',
+                style: const TextStyle(
                   color: Color(0xFFFF8C00),
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -606,7 +682,7 @@ class _CourierLevelCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: 0.88,
+              value: progress,
               minHeight: 8,
               backgroundColor: const Color(0xFFFFF3E0),
               valueColor: const AlwaysStoppedAnimation(Color(0xFFFF8C00)),

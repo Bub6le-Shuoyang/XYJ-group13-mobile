@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/models/business_models.dart';
+import '../../services/app_data_service.dart';
+import '../package/state/package_cubit.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.onLogout});
@@ -10,6 +14,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final _appDataService = AppDataService();
   static const _backgrounds = [
     'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80',
     'https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=900&q=80',
@@ -22,9 +27,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _couponCount = 3;
   final List<String> _addresses = ['清河村 3 组 18 号', '清河村村委会旁 20 米'];
   final List<String> _redeemedItems = [];
+  List<String> _orderSummaries = const [];
+  List<String> _pendingSummaries = const [];
+  List<_MallItem> _mallItems = _PointsMallScreen.defaultItems;
+  String _nickname = '村民张三';
+  String _avatarUrl = 'https://api.dicebear.com/7.x/avataaars/png?seed=Felix';
+  String _memberLevel = '金牌村民';
+  int _monthlySignedCount = 8;
+  double _balance = 0;
 
   static const _coverTop = 190.0;
   static const _revealTop = 360.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final packages = context.read<PackageCubit>().state.packages;
+    final result = await _appDataService.getUserProfile(packages);
+    final profile = result.data;
+    if (!mounted || profile == null) {
+      return;
+    }
+    setState(() {
+      _points = profile.points;
+      _couponCount = profile.couponCount;
+      _balance = profile.balance;
+      _nickname = profile.nickname;
+      _avatarUrl = profile.avatarUrl;
+      _memberLevel = profile.memberLevel;
+      _monthlySignedCount = profile.monthlySignedCount;
+      _orderSummaries = profile.orderSummaries;
+      _pendingSummaries = profile.pendingSummaries;
+      _mallItems = profile.mallItems.map(_MallItem.fromVO).toList();
+      if (profile.addresses.isNotEmpty) {
+        _addresses
+          ..clear()
+          ..addAll(profile.addresses);
+      }
+      if (profile.backgroundUrls.isNotEmpty) {
+        _backgroundUrl = profile.backgroundUrls.first;
+      }
+    });
+  }
 
   void _openSimpleListPage({
     required String title,
@@ -53,7 +101,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute(
         builder: (_) => _AddressManagementScreen(
           addresses: _addresses,
-          onAddAddress: (address) => setState(() => _addresses.add(address)),
+          onAddAddress: (address) {
+            _appDataService.addAddress(address);
+            setState(() => _addresses.add(address));
+          },
         ),
       ),
     );
@@ -65,6 +116,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute(
         builder: (_) => _PointsMallScreen(
           points: _points,
+          items: _mallItems,
           onRedeem: (item) {
             if (_points < item.points) {
               ScaffoldMessenger.of(
@@ -73,6 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return false;
             }
 
+            _appDataService.redeemMallItem(item.id);
             setState(() {
               _points -= item.points;
               _redeemedItems.insert(0, item.name);
@@ -251,18 +304,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ],
                       ),
-                      child: const CircleAvatar(
+                      child: CircleAvatar(
                         radius: 40,
                         backgroundColor: Colors.white,
-                        backgroundImage: NetworkImage(
-                          'https://api.dicebear.com/7.x/avataaars/png?seed=Felix',
-                        ),
+                        backgroundImage: NetworkImage(_avatarUrl),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      '村民张三',
-                      style: TextStyle(
+                    Text(
+                      _nickname,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -278,18 +329,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.stars_rounded,
                             size: 14,
                             color: Colors.white,
                           ),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Text(
-                            '金牌村民',
-                            style: TextStyle(
+                            _memberLevel,
+                            style: const TextStyle(
                               fontSize: 12,
                               color: Colors.white,
                               fontWeight: FontWeight.w500,
@@ -374,6 +425,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _ProfileStatsCard(
                               points: _points,
                               couponCount: _couponCount,
+                              balance: _balance,
                               onPointsTap: _openMallPage,
                               onCouponsTap: () => _openSimpleListPage(
                                 title: '我的优惠券',
@@ -381,7 +433,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: const Color(0xFFE53935),
                                 items: List.generate(
                                   _couponCount,
-                                  (index) => '乡驿家寄件满 10 减 2 优惠券 #${index + 1}',
+                                  (index) => '乡驿家上门配送优惠券 #${index + 1}',
                                 ),
                                 emptyText: '暂无优惠券，去积分商城兑换一张吧',
                               ),
@@ -389,27 +441,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 title: '我的零钱',
                                 icon: Icons.account_balance_wallet_rounded,
                                 color: const Color(0xFF4CAF50),
-                                items: const ['当前余额 ¥0.00', '最近暂无零钱流水'],
+                                items: [
+                                  '当前余额 ¥${_balance.toStringAsFixed(2)}',
+                                  '最近暂无零钱流水',
+                                ],
                               ),
                             ),
                             const SizedBox(height: 16),
                             _MenuGroup(
                               title: '我的订单',
                               items: [
-                                _MenuItem(
-                                  icon: Icons.send_rounded,
-                                  label: '寄件订单',
-                                  color: const Color(0xFFFF8C00),
-                                  onTap: () => _openSimpleListPage(
-                                    title: '寄件订单',
-                                    icon: Icons.send_rounded,
-                                    color: const Color(0xFFFF8C00),
-                                    items: const [
-                                      'XYJ25004 | 待入库 | 清河村 3 组 18 号',
-                                      'XYJ25002 | 已入库 | 村口驿站',
-                                    ],
-                                  ),
-                                ),
                                 _MenuItem(
                                   icon: Icons.call_received_rounded,
                                   label: '收件订单',
@@ -418,10 +459,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     title: '收件订单',
                                     icon: Icons.call_received_rounded,
                                     color: const Color(0xFF4CAF50),
-                                    items: const [
-                                      'PKG-003 | 骑手上门中 | 取件码 QJ25003',
-                                      'PKG-001 | 待骑手接单 | 农资工具箱',
-                                    ],
+                                    items: _orderSummaries,
                                   ),
                                 ),
                                 _MenuItem(
@@ -433,10 +471,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     title: '待处理',
                                     icon: Icons.pending_actions_rounded,
                                     color: const Color(0xFFFF6B35),
-                                    items: const [
-                                      '骑手上门时出示 QJ25003 完成签收',
-                                      '寄件订单 XYJ25004 等待管理员核验入库',
-                                    ],
+                                    items: _pendingSummaries,
                                   ),
                                 ),
                                 _MenuItem(
@@ -447,10 +482,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     title: '退换货',
                                     icon: Icons.replay_rounded,
                                     color: const Color(0xFF9C27B0),
-                                    items: const [
-                                      '暂无退换货申请',
-                                      '如需退换货可联系驿站客服协助处理',
-                                    ],
+                                    items: ['暂无退换货申请', '如需退换货可联系驿站客服协助处理'],
                                   ),
                                 ),
                               ],
@@ -533,9 +565,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     title: '会员等级',
                                     icon: Icons.workspace_premium_rounded,
                                     color: const Color(0xFFFFB300),
-                                    items: const [
-                                      '当前等级：金牌村民',
-                                      '本月寄取件 8 次，再完成 2 次可升级为钻石村民',
+                                    items: [
+                                      '当前等级：$_memberLevel',
+                                      '本月完成 $_monthlySignedCount 次收件签收，再完成 2 次可升级为钻石村民',
                                     ],
                                   ),
                                 ),
@@ -549,8 +581,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     color: const Color(0xFF4CAF50),
                                     items: [
                                       '当前积分 $_points',
-                                      '寄件奖励 +80',
                                       '取件奖励 +20',
+                                      '评价奖励 +10',
                                       if (_redeemedItems.isNotEmpty)
                                         '最近兑换 ${_redeemedItems.first}',
                                     ],
@@ -577,6 +609,7 @@ class _ProfileStatsCard extends StatelessWidget {
   const _ProfileStatsCard({
     required this.points,
     required this.couponCount,
+    required this.balance,
     required this.onPointsTap,
     required this.onCouponsTap,
     required this.onWalletTap,
@@ -584,6 +617,7 @@ class _ProfileStatsCard extends StatelessWidget {
 
   final int points;
   final int couponCount;
+  final double balance;
   final VoidCallback onPointsTap;
   final VoidCallback onCouponsTap;
   final VoidCallback onWalletTap;
@@ -624,7 +658,7 @@ class _ProfileStatsCard extends StatelessWidget {
           _DividerLine(),
           _StatItem(
             icon: Icons.account_balance_wallet_rounded,
-            value: '¥0.00',
+            value: '¥${balance.toStringAsFixed(2)}',
             label: '零钱',
             color: const Color(0xFF4CAF50),
             onTap: onWalletTap,
@@ -1109,10 +1143,9 @@ class _HelpCenterScreen extends StatelessWidget {
   const _HelpCenterScreen();
 
   static const _helps = [
-    ('如何寄件？', '点击首页“我要寄件”，填写包裹信息并在地图确认取件地址，提交后到驿站出示订单号。'),
     ('如何取件？', '点击首页“我要取件”展示取件码，骑手送货上门时核验取件码后自动完成签收。'),
-    ('积分如何获得？', '完成寄件、取件、评价和参与驿站活动都可以获得积分。'),
-    ('优惠券怎么用？', '寄件支付或站点活动时可使用优惠券抵扣费用。'),
+    ('积分如何获得？', '完成取件、评价和参与驿站活动都可以获得积分。'),
+    ('优惠券怎么用？', '下单配送服务或参与站点活动时可使用优惠券抵扣费用。'),
   ];
 
   @override
@@ -1207,6 +1240,7 @@ enum _MallItemType { coupon, goods }
 
 class _MallItem {
   const _MallItem({
+    required this.id,
     required this.name,
     required this.desc,
     required this.points,
@@ -1215,6 +1249,20 @@ class _MallItem {
     required this.type,
   });
 
+  factory _MallItem.fromVO(MallItemVO vo) {
+    final isCoupon = vo.type == MallItemType.coupon;
+    return _MallItem(
+      id: vo.id,
+      name: vo.name,
+      desc: vo.desc,
+      points: vo.points,
+      icon: isCoupon ? Icons.card_giftcard_rounded : Icons.inventory_2_rounded,
+      color: isCoupon ? const Color(0xFFE53935) : const Color(0xFF1677FF),
+      type: isCoupon ? _MallItemType.coupon : _MallItemType.goods,
+    );
+  }
+
+  final String id;
   final String name;
   final String desc;
   final int points;
@@ -1224,36 +1272,37 @@ class _MallItem {
 }
 
 class _PointsMallScreen extends StatefulWidget {
-  const _PointsMallScreen({required this.points, required this.onRedeem});
+  const _PointsMallScreen({
+    required this.points,
+    required this.items,
+    required this.onRedeem,
+  });
 
   final int points;
+  final List<_MallItem> items;
   final bool Function(_MallItem item) onRedeem;
 
-  @override
-  State<_PointsMallScreen> createState() => _PointsMallScreenState();
-}
-
-class _PointsMallScreenState extends State<_PointsMallScreen> {
-  late int _points = widget.points;
-
-  static const _items = [
+  static const defaultItems = [
     _MallItem(
-      name: '寄件满 10 减 2 优惠券',
-      desc: '适用于普通寄件订单',
+      id: 'MALL-001',
+      name: '上门配送立减券',
+      desc: '适用于上门配送服务',
       points: 120,
       icon: Icons.card_giftcard_rounded,
       color: Color(0xFFE53935),
       type: _MallItemType.coupon,
     ),
     _MallItem(
-      name: '寄件免服务费券',
-      desc: '抵扣一次驿站服务费',
+      id: 'MALL-002',
+      name: '配送优先券',
+      desc: '可优先安排骑手上门配送',
       points: 220,
       icon: Icons.confirmation_number_rounded,
       color: Color(0xFFFF8C00),
       type: _MallItemType.coupon,
     ),
     _MallItem(
+      id: 'MALL-003',
       name: '抽纸一提',
       desc: '到清河村中心驿站领取',
       points: 360,
@@ -1262,6 +1311,7 @@ class _PointsMallScreenState extends State<_PointsMallScreen> {
       type: _MallItemType.goods,
     ),
     _MallItem(
+      id: 'MALL-004',
       name: '农家土鸡蛋 6 枚',
       desc: '每日限量，兑换后站点自提',
       points: 520,
@@ -1270,6 +1320,13 @@ class _PointsMallScreenState extends State<_PointsMallScreen> {
       type: _MallItemType.goods,
     ),
   ];
+
+  @override
+  State<_PointsMallScreen> createState() => _PointsMallScreenState();
+}
+
+class _PointsMallScreenState extends State<_PointsMallScreen> {
+  late int _points = widget.points;
 
   void _redeem(_MallItem item) {
     final success = widget.onRedeem(item);
@@ -1325,7 +1382,9 @@ class _PointsMallScreenState extends State<_PointsMallScreen> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 12),
-          ..._items.map((item) => _MallItemCard(item: item, onRedeem: _redeem)),
+          ...widget.items.map(
+            (item) => _MallItemCard(item: item, onRedeem: _redeem),
+          ),
         ],
       ),
     );

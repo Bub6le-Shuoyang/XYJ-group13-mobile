@@ -11,8 +11,10 @@ class ApiClient {
   ApiClient._internal() {
     _dio = Dio(
       BaseOptions(
-        // TODO: 替换为实际的后端 Base URL
-        baseUrl: 'http://localhost:8080/api/v1',
+        baseUrl: const String.fromEnvironment(
+          'API_BASE_URL',
+          defaultValue: 'http://localhost:8080/api/v1',
+        ),
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
       ),

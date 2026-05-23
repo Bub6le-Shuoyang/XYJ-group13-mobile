@@ -7,7 +7,6 @@ enum PackageStatus {
   inStock('已入库'),
   taskPublished('待骑手接单'),
   assigned('派送中'),
-  readyForPickup('待取件'),
   completed('已完成');
 
   const PackageStatus(this.label);
@@ -18,7 +17,6 @@ enum PackageStatus {
 abstract class VillagePackage with _$VillagePackage {
   const factory VillagePackage({
     required String id,
-    required String orderCode,
     required String pickupCode,
     required String name,
     required String sender,
@@ -37,6 +35,8 @@ abstract class VillagePackage with _$VillagePackage {
 abstract class PackageState with _$PackageState {
   const factory PackageState({
     @Default([]) List<VillagePackage> packages,
-    @Default(4) int nextPackageNo,
+    @Default(false) bool isLoading,
+    @Default(false) bool isFallbackData,
+    String? message,
   }) = _PackageState;
 }

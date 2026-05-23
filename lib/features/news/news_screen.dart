@@ -1,22 +1,6 @@
 import 'package:flutter/material.dart';
-
-class NewsPost {
-  const NewsPost({
-    required this.title,
-    required this.content,
-    required this.tag,
-    required this.likes,
-    required this.comments,
-    required this.isUrgent,
-  });
-
-  final String title;
-  final String content;
-  final String tag;
-  final int likes;
-  final List<String> comments;
-  final bool isUrgent;
-}
+import '../../core/models/business_models.dart';
+import '../../services/app_data_service.dart';
 
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
@@ -26,19 +10,26 @@ class NewsScreen extends StatefulWidget {
 }
 
 class _NewsScreenState extends State<NewsScreen> {
-  final _posts = List.generate(
-    5,
-    (index) => NewsPost(
-      title: index == 0 ? '明日暴雨预警' : '驿站新增积分兑换商品',
-      content: index == 0
-          ? '⚠️ 明日暴雨预警，部分快递可能会延迟派送，请大家谅解！请各位村民提前安排寄取件时间，易碎和生鲜包裹会优先安排入库保管。'
-          : '驿站新增积分兑换商品：金龙鱼洗衣液、抽纸和农家土鸡蛋，大家快来兑换吧~ 积分不足也可以在寄取件后继续累计。',
-      tag: index == 0 ? '紧急通知' : '驿站动态',
-      likes: 10 + index * 5,
-      comments: ['收到，谢谢提醒', '这个活动不错'],
-      isUrgent: index == 0,
-    ),
-  );
+  final _appDataService = AppDataService();
+  List<NewsPostVO> _posts = const [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNews();
+  }
+
+  Future<void> _loadNews() async {
+    final result = await _appDataService.getNewsPosts();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _posts = result.data ?? const [];
+      _isLoading = false;
+    });
+  }
 
   void _showPublishSheet() {
     final controller = TextEditingController();
@@ -86,18 +77,26 @@ class _NewsScreenState extends State<NewsScreen> {
               const SizedBox(height: 18),
               FilledButton.icon(
                 key: const ValueKey('publish_news_confirm_button'),
-                onPressed: () {
+                onPressed: () async {
                   final text = controller.text.trim();
                   if (text.isEmpty) {
+                    return;
+                  }
+                  final result = await _appDataService.publishNews(text);
+                  if (!context.mounted || result.data != true) {
                     return;
                   }
                   setState(() {
                     _posts.insert(
                       0,
-                      NewsPost(
+                      NewsPostVO(
+                        id: 'LOCAL-${DateTime.now().millisecondsSinceEpoch}',
                         title: '村民发布',
                         content: text,
                         tag: '村民分享',
+                        authorName: '村民张三',
+                        stationName: '清河村中心驿站',
+                        publishedAtText: '刚刚',
                         likes: 0,
                         comments: const [],
                         isUrgent: false,
@@ -131,24 +130,28 @@ class _NewsScreenState extends State<NewsScreen> {
         onPressed: _showPublishSheet,
         child: const Icon(Icons.add_rounded, size: 32),
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-        itemCount: _posts.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final post = _posts[index];
-          return _NewsCard(
-            post: post,
-            index: index,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => NewsDetailScreen(post: post)),
-              );
-            },
-          );
-        },
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              itemCount: _posts.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final post = _posts[index];
+                return _NewsCard(
+                  post: post,
+                  index: index,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => NewsDetailScreen(post: post),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
     );
   }
 }
@@ -160,7 +163,7 @@ class _NewsCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final NewsPost post;
+  final NewsPostVO post;
   final int index;
   final VoidCallback onTap;
 
@@ -213,7 +216,7 @@ class _NewsCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    '2小时前',
+                    post.publishedAtText,
                     style: TextStyle(color: Colors.grey[400], fontSize: 12),
                   ),
                 ],
@@ -229,7 +232,7 @@ class _NewsCard extends StatelessWidget {
 class _NewsAuthorRow extends StatelessWidget {
   const _NewsAuthorRow({required this.post});
 
-  final NewsPost post;
+  final NewsPostVO post;
 
   @override
   Widget build(BuildContext context) {
@@ -247,16 +250,22 @@ class _NewsAuthorRow extends StatelessWidget {
           child: const Icon(Icons.store_rounded, color: Colors.white, size: 20),
         ),
         const SizedBox(width: 10),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '站点管理员',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                post.authorName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
               ),
-              SizedBox(height: 2),
-              Text('清河村驿站', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              const SizedBox(height: 2),
+              Text(
+                post.stationName,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
             ],
           ),
         ),
@@ -302,7 +311,7 @@ class _ActionChip extends StatelessWidget {
 class NewsDetailScreen extends StatefulWidget {
   const NewsDetailScreen({super.key, required this.post});
 
-  final NewsPost post;
+  final NewsPostVO post;
 
   @override
   State<NewsDetailScreen> createState() => _NewsDetailScreenState();

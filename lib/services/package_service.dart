@@ -1,10 +1,7 @@
 import '../core/models/result.dart';
-import '../core/network/api_client.dart';
 import '../features/package/state/package_state.dart';
 
 class PackageService {
-  final ApiClient _apiClient = ApiClient();
-
   // 获取所有包裹
   Future<Result<List<VillagePackage>>> getPackages() async {
     // 假设后端接口为 /packages
@@ -22,13 +19,15 @@ class PackageService {
       data: [
         VillagePackage(
           id: 'PKG-001',
+          orderCode: 'XYJ25001',
+          pickupCode: 'QJ25001',
           name: '农资工具箱',
           sender: '镇上仓库',
           receiver: '王大爷',
           address: '清河村 3 组 18 号',
           reward: 8,
           status: PackageStatus.taskPublished,
-          timeline: ['站点完成入库', '管理员发布配送任务'],
+          timeline: ['站点完成入库', '站点管理员确认出库，等待骑手接单'],
           lat: 30.51,
           lng: 114.31,
         ),
@@ -54,6 +53,8 @@ class PackageService {
       timestamp: DateTime.now().millisecondsSinceEpoch,
       data: VillagePackage(
         id: 'PKG-${DateTime.now().millisecondsSinceEpoch}',
+        orderCode: 'XYJ${DateTime.now().millisecondsSinceEpoch % 100000}',
+        pickupCode: 'QJ${DateTime.now().millisecondsSinceEpoch % 100000}',
         name: name,
         sender: '当前村民',
         receiver: receiver,

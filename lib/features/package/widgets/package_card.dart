@@ -100,12 +100,36 @@ class PackageCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          package.id,
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 12,
-                          ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            Text(
+                              package.id,
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              '订单号 ${package.orderCode}',
+                              style: const TextStyle(
+                                color: Color(0xFFFF8C00),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (package.status == PackageStatus.assigned ||
+                                package.status == PackageStatus.readyForPickup)
+                              Text(
+                                '取件码 ${package.pickupCode}',
+                                style: const TextStyle(
+                                  color: Color(0xFF4CAF50),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),

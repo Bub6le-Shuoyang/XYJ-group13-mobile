@@ -47,31 +47,34 @@ class _UserMainScreenState extends State<UserMainScreen> {
           ProfileScreen(onLogout: () => context.read<AuthCubit>().logout()),
         ],
       ),
-      floatingActionButton: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.primary.withValues(alpha: 0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: FloatingActionButton(
-          key: const ValueKey('package_tab_fab'),
-          onPressed: () => setState(() => _currentIndex = 1),
-          elevation: 0,
-          backgroundColor: _currentIndex == 1
-              ? colorScheme.primary
-              : Colors.white,
-          foregroundColor: _currentIndex == 1
-              ? Colors.white
-              : colorScheme.primary,
-          shape: const CircleBorder(),
-          child: const Icon(Icons.inventory_2_rounded, size: 28),
+      floatingActionButton: Transform.translate(
+        offset: const Offset(0, 14),
+        child: Container(
+          width: 76,
+          height: 76,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.primary.withValues(alpha: 0.35),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: FloatingActionButton(
+            key: const ValueKey('package_tab_fab'),
+            onPressed: () => setState(() => _currentIndex = 1),
+            elevation: 0,
+            backgroundColor: _currentIndex == 1
+                ? colorScheme.primary
+                : Colors.white,
+            foregroundColor: _currentIndex == 1
+                ? Colors.white
+                : colorScheme.primary,
+            shape: const CircleBorder(),
+            child: const Icon(Icons.inventory_2_rounded, size: 36),
+          ),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -88,7 +91,7 @@ class _UserMainScreenState extends State<UserMainScreen> {
         ),
         child: BottomAppBar(
           shape: const CircularNotchedRectangle(),
-          notchMargin: 8,
+          notchMargin: 10,
           clipBehavior: Clip.antiAlias,
           color: Colors.white,
           elevation: 0,

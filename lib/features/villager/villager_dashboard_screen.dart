@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../package/state/package_cubit.dart';
 import '../package/state/package_state.dart';
 import '../package/widgets/package_card.dart';
+import 'address_picker_screen.dart';
+import 'nearby_station_map_screen.dart';
 
 class VillagerDashboardScreen extends StatefulWidget {
   const VillagerDashboardScreen({super.key});
@@ -16,31 +18,49 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
   final _nameController = TextEditingController();
   final _receiverController = TextEditingController();
   final _addressController = TextEditingController();
+  final _scrollController = ScrollController();
+  final _allPackagesKey = GlobalKey();
+  SelectedPickupAddress? _selectedAddress;
+  String? _highlightedPackageId;
+  int _highlightTick = 0;
 
   @override
   void dispose() {
     _nameController.dispose();
     _receiverController.dispose();
     _addressController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  void _submitPackage() {
+  String? _submitPackage() {
     final name = _nameController.text.trim();
     final receiver = _receiverController.text.trim();
     final address = _addressController.text.trim();
 
-    if (name.isEmpty || receiver.isEmpty || address.isEmpty) {
+    if (name.isEmpty ||
+        receiver.isEmpty ||
+        address.isEmpty ||
+        _selectedAddress == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请完整填写寄件信息，不能有空项')));
-      return;
+      ).showSnackBar(const SnackBar(content: Text('请完整填写寄件信息，并在地图上确认取件地址')));
+      return null;
     }
 
-    context.read<PackageCubit>().addPackage(name, receiver, address);
+    final selectedAddress = _selectedAddress!;
+    final orderCode = context.read<PackageCubit>().addPackage(
+      name,
+      receiver,
+      address,
+      lat: selectedAddress.lat,
+      lng: selectedAddress.lng,
+    );
     _nameController.clear();
     _receiverController.clear();
     _addressController.clear();
+    _selectedAddress = null;
+    return orderCode;
   }
 
   void _showSendDialog() {
@@ -48,15 +68,143 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _SendPackageSheet(
-        nameController: _nameController,
-        receiverController: _receiverController,
-        addressController: _addressController,
-        onSubmit: () {
-          _submitPackage();
-          Navigator.pop(context);
-        },
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) => _SendPackageSheet(
+            nameController: _nameController,
+            receiverController: _receiverController,
+            addressController: _addressController,
+            selectedAddress: _selectedAddress,
+            onSelectAddress: () async {
+              await _selectPickupAddress();
+              setSheetState(() {});
+            },
+            onSubmit: () {
+              final orderCode = _submitPackage();
+              if (orderCode == null) {
+                return;
+              }
+              Navigator.pop(context);
+              _showOrderCreatedDialog(orderCode);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _selectPickupAddress() async {
+    final selected = await Navigator.push<SelectedPickupAddress>(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            AddressPickerScreen(initialAddress: _addressController.text.trim()),
       ),
+    );
+
+    if (selected == null) {
+      return;
+    }
+
+    setState(() {
+      _selectedAddress = selected;
+      _addressController.text = selected.address;
+    });
+  }
+
+  void _showOrderCreatedDialog(String orderCode) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => _OrderCreatedDialog(orderCode: orderCode),
+    );
+  }
+
+  void _showPickupCodeSheet() {
+    final pickupPackages = context
+        .read<PackageCubit>()
+        .state
+        .packages
+        .where((package) => package.status == PackageStatus.assigned)
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _PickupCodeSheet(packages: pickupPackages),
+    );
+  }
+
+  Future<void> _showSearchPackageDialog() async {
+    final controller = TextEditingController();
+    final keyword = await showDialog<String>(
+      context: context,
+      builder: (context) => _PackageSearchDialog(controller: controller),
+    );
+    controller.dispose();
+
+    final normalizedKeyword = keyword?.trim().toUpperCase();
+    if (normalizedKeyword == null || normalizedKeyword.isEmpty) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
+    VillagePackage? matchedPackage;
+    for (final package in context.read<PackageCubit>().state.packages) {
+      if (package.id.toUpperCase() == normalizedKeyword ||
+          package.orderCode.toUpperCase() == normalizedKeyword ||
+          package.pickupCode.toUpperCase() == normalizedKeyword) {
+        matchedPackage = package;
+        break;
+      }
+    }
+
+    if (matchedPackage == null) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('没有找到对应快递，请核对订单号')));
+      return;
+    }
+
+    final matchedPackageId = matchedPackage.id;
+    await _scrollToAllPackages();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _highlightedPackageId = matchedPackageId;
+      _highlightTick++;
+    });
+  }
+
+  Future<void> _scrollToAllPackages() async {
+    final targetContext = _allPackagesKey.currentContext;
+    if (targetContext != null) {
+      await Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeOutCubic,
+        alignment: 0.08,
+      );
+      return;
+    }
+
+    await _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _openNearbyStations() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NearbyStationMapScreen()),
     );
   }
 
@@ -68,49 +216,53 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
       builder: (context, state) {
         final myPackages = state.packages.toList();
         final pickupPackages = state.packages
-            .where((p) => p.status == PackageStatus.readyForPickup)
+            .where((p) => p.status == PackageStatus.assigned)
             .toList();
 
         return ListView(
+          controller: _scrollController,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            _ServiceGrid(onSendTap: _showSendDialog),
+            _ServiceGrid(
+              onSendTap: _showSendDialog,
+              onPickupCodeTap: _showPickupCodeSheet,
+              onSearchTap: _showSearchPackageDialog,
+              onStationTap: _openNearbyStations,
+            ),
             const SizedBox(height: 20),
             if (pickupPackages.isNotEmpty) ...[
               _SectionHeader(
                 icon: Icons.notifications_active_rounded,
-                title: '待取件提醒',
+                title: '待骑手上门',
                 count: pickupPackages.length,
                 color: const Color(0xFFFF6B35),
               ),
               const SizedBox(height: 10),
               ...pickupPackages.map(
-                (p) => PackageCard(
-                  key: ValueKey('pickup_${p.id}'),
-                  package: p,
-                  actionLabel: '确认取件',
-                  actionIcon: Icons.check_circle_rounded,
-                  onPressed: () => context.read<PackageCubit>().changeStatus(
-                    p.id,
-                    PackageStatus.completed,
-                    '村民完成取件',
-                  ),
-                ),
+                (p) => PackageCard(key: ValueKey('pickup_${p.id}'), package: p),
               ),
               const SizedBox(height: 8),
             ],
-            _SectionHeader(
-              icon: Icons.inventory_2_rounded,
-              title: '全部包裹',
-              count: myPackages.length,
-              color: colorScheme.primary,
+            KeyedSubtree(
+              key: _allPackagesKey,
+              child: _SectionHeader(
+                icon: Icons.inventory_2_rounded,
+                title: '全部包裹',
+                count: myPackages.length,
+                color: colorScheme.primary,
+              ),
             ),
             const SizedBox(height: 10),
             if (myPackages.isEmpty)
               _EmptyPlaceholder()
             else
               ...myPackages.map(
-                (p) => PackageCard(key: ValueKey('pkg_${p.id}'), package: p),
+                (p) => _HighlightPackageCard(
+                  key: ValueKey('pkg_${p.id}_$_highlightTick'),
+                  package: p,
+                  highlighted: p.id == _highlightedPackageId,
+                  highlightTick: _highlightTick,
+                ),
               ),
           ],
         );
@@ -120,9 +272,17 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
 }
 
 class _ServiceGrid extends StatelessWidget {
-  const _ServiceGrid({required this.onSendTap});
+  const _ServiceGrid({
+    required this.onSendTap,
+    required this.onPickupCodeTap,
+    required this.onSearchTap,
+    required this.onStationTap,
+  });
 
   final VoidCallback onSendTap;
+  final VoidCallback onPickupCodeTap;
+  final VoidCallback onSearchTap;
+  final VoidCallback onStationTap;
 
   @override
   Widget build(BuildContext context) {
@@ -150,25 +310,25 @@ class _ServiceGrid extends StatelessWidget {
             onTap: onSendTap,
           ),
           _ServiceItem(
-            icon: Icons.markunread_mailbox_rounded,
+            icon: Icons.qr_code_2_rounded,
             label: '我要取件',
             color: const Color(0xFF4CAF50),
             bgColor: const Color(0xFFE8F5E9),
-            onTap: () {},
+            onTap: onPickupCodeTap,
           ),
           _ServiceItem(
             icon: Icons.search_rounded,
             label: '查快递',
             color: const Color(0xFF1677FF),
             bgColor: const Color(0xFFE3F2FD),
-            onTap: () {},
+            onTap: onSearchTap,
           ),
           _ServiceItem(
             icon: Icons.store_rounded,
             label: '附近驿站',
             color: const Color(0xFF9C27B0),
             bgColor: const Color(0xFFF3E5F5),
-            onTap: () {},
+            onTap: onStationTap,
           ),
         ],
       ),
@@ -305,17 +465,287 @@ class _EmptyPlaceholder extends StatelessWidget {
   }
 }
 
+class _PackageSearchDialog extends StatelessWidget {
+  const _PackageSearchDialog({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('查快递'),
+      content: TextField(
+        key: const ValueKey('search_package_field'),
+        controller: controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.characters,
+        decoration: const InputDecoration(
+          hintText: '输入包裹单号 / 寄件订单号 / 取件码',
+          prefixIcon: Icon(Icons.search_rounded),
+        ),
+        onSubmitted: (value) => Navigator.pop(context, value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          key: const ValueKey('search_package_button'),
+          onPressed: () => Navigator.pop(context, controller.text),
+          child: const Text('定位快递'),
+        ),
+      ],
+    );
+  }
+}
+
+class _HighlightPackageCard extends StatelessWidget {
+  const _HighlightPackageCard({
+    super.key,
+    required this.package,
+    required this.highlighted,
+    required this.highlightTick,
+  });
+
+  final VillagePackage package;
+  final bool highlighted;
+  final int highlightTick;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!highlighted) {
+      return PackageCard(package: package);
+    }
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('highlight_${package.id}_$highlightTick'),
+      tween: Tween(begin: 1.08, end: 1),
+      duration: const Duration(milliseconds: 520),
+      curve: Curves.elasticOut,
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1677FF).withValues(alpha: 0.18),
+                  blurRadius: 20,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: child,
+          ),
+        );
+      },
+      child: PackageCard(package: package),
+    );
+  }
+}
+
+class _PickupCodeSheet extends StatelessWidget {
+  const _PickupCodeSheet({required this.packages});
+
+  final List<VillagePackage> packages;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.78,
+      ),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomPadding),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            '我的取件码',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '骑手送货上门时出示取件码，骑手核验后会自动完成签收。',
+            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          if (packages.isEmpty)
+            const _PickupCodeEmpty()
+          else
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: packages.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+                itemBuilder: (context, index) => _PickupCodeCard(
+                  key: ValueKey('pickup_code_card_${packages[index].id}'),
+                  package: packages[index],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PickupCodeCard extends StatelessWidget {
+  const _PickupCodeCard({super.key, required this.package});
+
+  final VillagePackage package;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F5F0),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFEDE7DD)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.markunread_mailbox_rounded,
+                  color: Color(0xFF4CAF50),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      package.name,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      package.address,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.qr_code_2_rounded,
+                  size: 46,
+                  color: Color(0xFF4CAF50),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  package.pickupCode,
+                  style: const TextStyle(
+                    color: Color(0xFF1B5E20),
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PickupCodeEmpty extends StatelessWidget {
+  const _PickupCodeEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F5F0),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.qr_code_2_rounded, size: 48, color: Colors.grey[300]),
+          const SizedBox(height: 12),
+          Text(
+            '暂无可出示的取件码',
+            style: TextStyle(color: Colors.grey[500], fontSize: 14),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '骑手接单并出库后，这里会显示取件码。',
+            style: TextStyle(color: Colors.grey[400], fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SendPackageSheet extends StatelessWidget {
   const _SendPackageSheet({
     required this.nameController,
     required this.receiverController,
     required this.addressController,
+    required this.selectedAddress,
+    required this.onSelectAddress,
     required this.onSubmit,
   });
 
   final TextEditingController nameController;
   final TextEditingController receiverController;
   final TextEditingController addressController;
+  final SelectedPickupAddress? selectedAddress;
+  final VoidCallback onSelectAddress;
   final VoidCallback onSubmit;
 
   @override
@@ -366,14 +796,32 @@ class _SendPackageSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          TextField(
+          InkWell(
             key: const ValueKey('package_address_field'),
-            controller: addressController,
-            decoration: const InputDecoration(
-              hintText: '取送地址',
-              prefixIcon: Icon(Icons.location_on_outlined, size: 20),
+            onTap: onSelectAddress,
+            borderRadius: BorderRadius.circular(12),
+            child: IgnorePointer(
+              child: TextField(
+                controller: addressController,
+                decoration: InputDecoration(
+                  hintText: '点击使用地图输入并定位取件地址',
+                  prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
+                  suffixIcon: Icon(
+                    selectedAddress == null
+                        ? Icons.map_outlined
+                        : Icons.check_circle_rounded,
+                    color: selectedAddress == null
+                        ? Colors.grey
+                        : const Color(0xFF4CAF50),
+                  ),
+                ),
+              ),
             ),
           ),
+          if (selectedAddress != null) ...[
+            const SizedBox(height: 8),
+            _SelectedAddressHint(address: selectedAddress!),
+          ],
           const SizedBox(height: 24),
           FilledButton(
             key: const ValueKey('submit_package_button'),
@@ -382,6 +830,90 @@ class _SendPackageSheet extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SelectedAddressHint extends StatelessWidget {
+  const _SelectedAddressHint({required this.address});
+
+  final SelectedPickupAddress address;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.my_location_rounded,
+            color: Color(0xFF4CAF50),
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '已定位：${address.lat.toStringAsFixed(4)}, ${address.lng.toStringAsFixed(4)}',
+              style: const TextStyle(color: Color(0xFF2E7D32), fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderCreatedDialog extends StatelessWidget {
+  const _OrderCreatedDialog({required this.orderCode});
+
+  final String orderCode;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('寄件订单已生成'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('请携带包裹前往驿站，并向管理员出示下面的订单号：'),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              orderCode,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFFFF8C00),
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '管理员核验成功后，订单状态会从“待入库”变为“已入库”。',
+            style: TextStyle(color: Colors.grey[600], fontSize: 13),
+          ),
+        ],
+      ),
+      actions: [
+        FilledButton(
+          key: const ValueKey('order_created_confirm_button'),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('我知道了'),
+        ),
+      ],
     );
   }
 }

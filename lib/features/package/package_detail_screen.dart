@@ -154,6 +154,10 @@ class PackageDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       _InfoRow(label: '单号', value: package.id),
+                      _InfoRow(label: '寄件订单号', value: package.orderCode),
+                      if (package.status == PackageStatus.assigned ||
+                          package.status == PackageStatus.readyForPickup)
+                        _InfoRow(label: '取件码', value: package.pickupCode),
                       _InfoRow(label: '名称', value: package.name),
                       _InfoRow(label: '寄件人', value: package.sender),
                       _InfoRow(label: '收件人', value: package.receiver),

@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$VillagePackage {
 
- String get id; String get name; String get sender; String get receiver; String get address; int get reward; PackageStatus get status; List<String> get timeline; String? get courier; double get lat; double get lng;
+ String get id; String get orderCode; String get pickupCode; String get name; String get sender; String get receiver; String get address; int get reward; PackageStatus get status; List<String> get timeline; String? get courier; double get lat; double get lng;
 /// Create a copy of VillagePackage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $VillagePackageCopyWith<VillagePackage> get copyWith => _$VillagePackageCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is VillagePackage&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.receiver, receiver) || other.receiver == receiver)&&(identical(other.address, address) || other.address == address)&&(identical(other.reward, reward) || other.reward == reward)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.timeline, timeline)&&(identical(other.courier, courier) || other.courier == courier)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is VillagePackage&&(identical(other.id, id) || other.id == id)&&(identical(other.orderCode, orderCode) || other.orderCode == orderCode)&&(identical(other.pickupCode, pickupCode) || other.pickupCode == pickupCode)&&(identical(other.name, name) || other.name == name)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.receiver, receiver) || other.receiver == receiver)&&(identical(other.address, address) || other.address == address)&&(identical(other.reward, reward) || other.reward == reward)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.timeline, timeline)&&(identical(other.courier, courier) || other.courier == courier)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,sender,receiver,address,reward,status,const DeepCollectionEquality().hash(timeline),courier,lat,lng);
+int get hashCode => Object.hash(runtimeType,id,orderCode,pickupCode,name,sender,receiver,address,reward,status,const DeepCollectionEquality().hash(timeline),courier,lat,lng);
 
 @override
 String toString() {
-  return 'VillagePackage(id: $id, name: $name, sender: $sender, receiver: $receiver, address: $address, reward: $reward, status: $status, timeline: $timeline, courier: $courier, lat: $lat, lng: $lng)';
+  return 'VillagePackage(id: $id, orderCode: $orderCode, pickupCode: $pickupCode, name: $name, sender: $sender, receiver: $receiver, address: $address, reward: $reward, status: $status, timeline: $timeline, courier: $courier, lat: $lat, lng: $lng)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $VillagePackageCopyWith<$Res>  {
   factory $VillagePackageCopyWith(VillagePackage value, $Res Function(VillagePackage) _then) = _$VillagePackageCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String sender, String receiver, String address, int reward, PackageStatus status, List<String> timeline, String? courier, double lat, double lng
+ String id, String orderCode, String pickupCode, String name, String sender, String receiver, String address, int reward, PackageStatus status, List<String> timeline, String? courier, double lat, double lng
 });
 
 
@@ -62,9 +62,11 @@ class _$VillagePackageCopyWithImpl<$Res>
 
 /// Create a copy of VillagePackage
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? sender = null,Object? receiver = null,Object? address = null,Object? reward = null,Object? status = null,Object? timeline = null,Object? courier = freezed,Object? lat = null,Object? lng = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? orderCode = null,Object? pickupCode = null,Object? name = null,Object? sender = null,Object? receiver = null,Object? address = null,Object? reward = null,Object? status = null,Object? timeline = null,Object? courier = freezed,Object? lat = null,Object? lng = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,orderCode: null == orderCode ? _self.orderCode : orderCode // ignore: cast_nullable_to_non_nullable
+as String,pickupCode: null == pickupCode ? _self.pickupCode : pickupCode // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
 as String,receiver: null == receiver ? _self.receiver : receiver // ignore: cast_nullable_to_non_nullable
@@ -160,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String orderCode,  String pickupCode,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _VillagePackage() when $default != null:
-return $default(_that.id,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
+return $default(_that.id,_that.orderCode,_that.pickupCode,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
   return orElse();
 
 }
@@ -181,10 +183,10 @@ return $default(_that.id,_that.name,_that.sender,_that.receiver,_that.address,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String orderCode,  String pickupCode,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)  $default,) {final _that = this;
 switch (_that) {
 case _VillagePackage():
-return $default(_that.id,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
+return $default(_that.id,_that.orderCode,_that.pickupCode,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -201,10 +203,10 @@ return $default(_that.id,_that.name,_that.sender,_that.receiver,_that.address,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String orderCode,  String pickupCode,  String name,  String sender,  String receiver,  String address,  int reward,  PackageStatus status,  List<String> timeline,  String? courier,  double lat,  double lng)?  $default,) {final _that = this;
 switch (_that) {
 case _VillagePackage() when $default != null:
-return $default(_that.id,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
+return $default(_that.id,_that.orderCode,_that.pickupCode,_that.name,_that.sender,_that.receiver,_that.address,_that.reward,_that.status,_that.timeline,_that.courier,_that.lat,_that.lng);case _:
   return null;
 
 }
@@ -216,10 +218,12 @@ return $default(_that.id,_that.name,_that.sender,_that.receiver,_that.address,_t
 
 
 class _VillagePackage implements VillagePackage {
-  const _VillagePackage({required this.id, required this.name, required this.sender, required this.receiver, required this.address, required this.reward, required this.status, required final  List<String> timeline, this.courier, required this.lat, required this.lng}): _timeline = timeline;
+  const _VillagePackage({required this.id, required this.orderCode, required this.pickupCode, required this.name, required this.sender, required this.receiver, required this.address, required this.reward, required this.status, required final  List<String> timeline, this.courier, required this.lat, required this.lng}): _timeline = timeline;
   
 
 @override final  String id;
+@override final  String orderCode;
+@override final  String pickupCode;
 @override final  String name;
 @override final  String sender;
 @override final  String receiver;
@@ -247,16 +251,16 @@ _$VillagePackageCopyWith<_VillagePackage> get copyWith => __$VillagePackageCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _VillagePackage&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.receiver, receiver) || other.receiver == receiver)&&(identical(other.address, address) || other.address == address)&&(identical(other.reward, reward) || other.reward == reward)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._timeline, _timeline)&&(identical(other.courier, courier) || other.courier == courier)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _VillagePackage&&(identical(other.id, id) || other.id == id)&&(identical(other.orderCode, orderCode) || other.orderCode == orderCode)&&(identical(other.pickupCode, pickupCode) || other.pickupCode == pickupCode)&&(identical(other.name, name) || other.name == name)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.receiver, receiver) || other.receiver == receiver)&&(identical(other.address, address) || other.address == address)&&(identical(other.reward, reward) || other.reward == reward)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other._timeline, _timeline)&&(identical(other.courier, courier) || other.courier == courier)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,sender,receiver,address,reward,status,const DeepCollectionEquality().hash(_timeline),courier,lat,lng);
+int get hashCode => Object.hash(runtimeType,id,orderCode,pickupCode,name,sender,receiver,address,reward,status,const DeepCollectionEquality().hash(_timeline),courier,lat,lng);
 
 @override
 String toString() {
-  return 'VillagePackage(id: $id, name: $name, sender: $sender, receiver: $receiver, address: $address, reward: $reward, status: $status, timeline: $timeline, courier: $courier, lat: $lat, lng: $lng)';
+  return 'VillagePackage(id: $id, orderCode: $orderCode, pickupCode: $pickupCode, name: $name, sender: $sender, receiver: $receiver, address: $address, reward: $reward, status: $status, timeline: $timeline, courier: $courier, lat: $lat, lng: $lng)';
 }
 
 
@@ -267,7 +271,7 @@ abstract mixin class _$VillagePackageCopyWith<$Res> implements $VillagePackageCo
   factory _$VillagePackageCopyWith(_VillagePackage value, $Res Function(_VillagePackage) _then) = __$VillagePackageCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String sender, String receiver, String address, int reward, PackageStatus status, List<String> timeline, String? courier, double lat, double lng
+ String id, String orderCode, String pickupCode, String name, String sender, String receiver, String address, int reward, PackageStatus status, List<String> timeline, String? courier, double lat, double lng
 });
 
 
@@ -284,9 +288,11 @@ class __$VillagePackageCopyWithImpl<$Res>
 
 /// Create a copy of VillagePackage
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? sender = null,Object? receiver = null,Object? address = null,Object? reward = null,Object? status = null,Object? timeline = null,Object? courier = freezed,Object? lat = null,Object? lng = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? orderCode = null,Object? pickupCode = null,Object? name = null,Object? sender = null,Object? receiver = null,Object? address = null,Object? reward = null,Object? status = null,Object? timeline = null,Object? courier = freezed,Object? lat = null,Object? lng = null,}) {
   return _then(_VillagePackage(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,orderCode: null == orderCode ? _self.orderCode : orderCode // ignore: cast_nullable_to_non_nullable
+as String,pickupCode: null == pickupCode ? _self.pickupCode : pickupCode // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,sender: null == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
 as String,receiver: null == receiver ? _self.receiver : receiver // ignore: cast_nullable_to_non_nullable

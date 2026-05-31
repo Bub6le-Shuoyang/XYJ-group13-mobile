@@ -400,6 +400,31 @@ class RedeemRecordVO {
   }
 }
 
+class SplashAdVO {
+  final String adNo;
+  final String name;
+  final String imageUrl;
+  final String targetUrl;
+
+  const SplashAdVO({
+    required this.adNo,
+    required this.name,
+    required this.imageUrl,
+    required this.targetUrl,
+  });
+
+  factory SplashAdVO.fromJson(Map<String, dynamic> json) {
+    return SplashAdVO(
+      adNo: _readString(json, ['ad_no', 'adNo']),
+      name: _readString(json, ['name']),
+      imageUrl: _readString(json, ['image_url', 'imageUrl']),
+      targetUrl: _readString(json, ['target_url', 'targetUrl']),
+    );
+  }
+
+  bool get isValid => imageUrl.isNotEmpty && targetUrl.isNotEmpty;
+}
+
 class UserProfileVO {
   final String userNo;
   final String nickname;

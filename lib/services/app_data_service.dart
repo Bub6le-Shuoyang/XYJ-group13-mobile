@@ -48,6 +48,13 @@ class AppDataService {
     return _emptyList(result);
   }
 
+  Future<Result<SplashAdVO>> getSplashAd() async {
+    return _apiClient.get<SplashAdVO>(
+      '/sys/ads/splash',
+      fromJsonT: (data) => SplashAdVO.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
   Future<Result<UserProfileVO>> getUserProfile(
     List<VillagePackage> packages,
   ) async {

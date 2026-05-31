@@ -256,6 +256,7 @@ class NewsPostVO {
   final String stationName;
   final String publishedAtText;
   final int likes;
+  final int commentsCount;
   final List<String> comments;
   final bool isUrgent;
 
@@ -268,11 +269,13 @@ class NewsPostVO {
     required this.stationName,
     required this.publishedAtText,
     required this.likes,
+    required this.commentsCount,
     required this.comments,
     required this.isUrgent,
   });
 
   factory NewsPostVO.fromJson(Map<String, dynamic> json) {
+    final comments = _readStringList(json, ['comments']);
     return NewsPostVO(
       id: _readString(json, ['id', 'post_id', 'postId']),
       title: _readString(json, ['title']),
@@ -280,16 +283,39 @@ class NewsPostVO {
       tag: _readString(json, ['tag']),
       authorName: _readString(json, ['author_name', 'authorName'], '站点管理员'),
       stationName: _readString(json, ['station_name', 'stationName'], '清河村驿站'),
-      publishedAtText: _readString(json, [
-        'published_at_text',
-        'publishedAtText',
-      ], '刚刚'),
+      publishedAtText: _readPublishedAtText(json),
       likes: _readInt(json, ['likes']),
-      comments: _readStringList(json, ['comments']),
+      commentsCount: comments.isNotEmpty
+          ? comments.length
+          : _readInt(json, ['comments_count', 'commentsCount']),
+      comments: comments,
       isUrgent:
           json['is_urgent'] as bool? ?? json['isUrgent'] as bool? ?? false,
     );
   }
+}
+
+String _readPublishedAtText(Map<String, dynamic> json) {
+  final text = _readString(json, ['published_at_text', 'publishedAtText']);
+  if (text.isNotEmpty) {
+    return text;
+  }
+  final rawTime = _readString(json, ['publish_time', 'publishTime']);
+  final time = DateTime.tryParse(rawTime);
+  if (time == null) {
+    return '刚刚';
+  }
+  final diff = DateTime.now().difference(time.toLocal());
+  if (diff.inMinutes < 1) {
+    return '刚刚';
+  }
+  if (diff.inHours < 1) {
+    return '${diff.inMinutes}分钟前';
+  }
+  if (diff.inDays < 1) {
+    return '${diff.inHours}小时前';
+  }
+  return '${diff.inDays}天前';
 }
 
 enum MallItemType { coupon, goods }

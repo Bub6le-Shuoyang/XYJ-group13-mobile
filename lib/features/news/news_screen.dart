@@ -13,6 +13,7 @@ class _NewsScreenState extends State<NewsScreen> {
   final _appDataService = AppDataService();
   List<NewsPostVO> _posts = const [];
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -21,12 +22,21 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   Future<void> _loadNews() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     final result = await _appDataService.getNewsPosts();
     if (!mounted) {
       return;
     }
     setState(() {
-      _posts = result.data ?? const [];
+      if (result.isSuccess) {
+        _posts = result.data ?? const [];
+      } else {
+        _posts = const [];
+        _errorMessage = result.message;
+      }
       _isLoading = false;
     });
   }
@@ -123,28 +133,102 @@ class _NewsScreenState extends State<NewsScreen> {
         onPressed: _showPublishSheet,
         child: const Icon(Icons.add_rounded, size: 32),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-              itemCount: _posts.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final post = _posts[index];
-                return _NewsCard(
-                  post: post,
-                  index: index,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => NewsDetailScreen(post: post),
-                      ),
-                    );
-                  },
-                );
-              },
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final errorMessage = _errorMessage;
+    if (errorMessage != null) {
+      return _NewsErrorView(message: errorMessage, onRetry: _loadNews);
+    }
+    if (_posts.isEmpty) {
+      return _NewsEmptyView(onRetry: _loadNews);
+    }
+    return RefreshIndicator(
+      onRefresh: _loadNews,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+        itemCount: _posts.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final post = _posts[index];
+          return _NewsCard(
+            post: post,
+            index: index,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => NewsDetailScreen(post: post)),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _NewsErrorView extends StatelessWidget {
+  const _NewsErrorView({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF666666), fontSize: 15),
             ),
+            const SizedBox(height: 16),
+            FilledButton(
+              key: const ValueKey('retry_load_news_button'),
+              onPressed: onRetry,
+              child: const Text('重新获取'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NewsEmptyView extends StatelessWidget {
+  const _NewsEmptyView({required this.onRetry});
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRetry,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 180),
+          Icon(Icons.article_outlined, size: 48, color: Colors.grey),
+          SizedBox(height: 12),
+          Center(
+            child: Text(
+              '暂无乡镇资讯，下拉可重新获取',
+              style: TextStyle(color: Color(0xFF666666), fontSize: 15),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -205,7 +289,7 @@ class _NewsCard extends StatelessWidget {
                   const SizedBox(width: 20),
                   _ActionChip(
                     icon: Icons.chat_bubble_outline_rounded,
-                    count: '${post.comments.length}',
+                    count: '${post.commentsCount}',
                   ),
                   const Spacer(),
                   Text(

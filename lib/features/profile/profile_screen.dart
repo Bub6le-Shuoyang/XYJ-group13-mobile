@@ -23,14 +23,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _backgroundUrl = _backgrounds.first;
   double _panelTop = 250;
-  int _points = 1250;
-  int _couponCount = 3;
-  final List<String> _addresses = ['清河村 3 组 18 号', '清河村村委会旁 20 米'];
+  int _points = 0;
+  int _couponCount = 0;
+  final List<String> _addresses = [];
   final List<String> _redeemedItems = [];
   List<String> _orderSummaries = const [];
   List<String> _pendingSummaries = const [];
-  List<_MallItem> _mallItems = _PointsMallScreen.defaultItems;
-  String _nickname = '村民张三';
+  List<_MallItem> _mallItems = const [];
+  String _nickname = '加载中';
   String _avatarUrl = 'https://api.dicebear.com/7.x/avataaars/png?seed=Felix';
   String _memberLevel = '金牌村民';
   int _monthlySignedCount = 8;
@@ -101,9 +101,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute(
         builder: (_) => _AddressManagementScreen(
           addresses: _addresses,
-          onAddAddress: (address) {
-            _appDataService.addAddress(address);
+          onAddAddress: (name, phone, address) async {
+            final result = await _appDataService.addAddress(
+              name: name,
+              phone: phone,
+              address: address,
+              isDefault: _addresses.isEmpty,
+            );
+            if (!mounted) {
+              return false;
+            }
+            if (!result.isSuccess || result.data == null) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(result.message)));
+              return false;
+            }
             setState(() => _addresses.add(address));
+            return true;
           },
         ),
       ),
@@ -117,7 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (_) => _PointsMallScreen(
           points: _points,
           items: _mallItems,
-          onRedeem: (item) {
+          onRedeem: (item) async {
             if (_points < item.points) {
               ScaffoldMessenger.of(
                 context,
@@ -125,7 +140,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return false;
             }
 
-            _appDataService.redeemMallItem(item.id);
+            final result = await _appDataService.redeemMallItem(item.id);
+            if (!mounted) {
+              return false;
+            }
+            if (!result.isSuccess || result.data == null) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(result.message)));
+              return false;
+            }
             setState(() {
               _points -= item.points;
               _redeemedItems.insert(0, item.name);
@@ -921,7 +945,8 @@ class _AddressManagementScreen extends StatefulWidget {
   });
 
   final List<String> addresses;
-  final ValueChanged<String> onAddAddress;
+  final Future<bool> Function(String name, String phone, String address)
+  onAddAddress;
 
   @override
   State<_AddressManagementScreen> createState() =>
@@ -932,19 +957,45 @@ class _AddressManagementScreenState extends State<_AddressManagementScreen> {
   late final List<String> _addresses = [...widget.addresses];
 
   void _showAddAddressDialog() {
-    final controller = TextEditingController();
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final addressController = TextEditingController();
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('新增地址'),
-        content: TextField(
-          key: const ValueKey('profile_address_field'),
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: '请输入常用地址',
-            prefixIcon: Icon(Icons.location_on_outlined),
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              key: const ValueKey('profile_address_name_field'),
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: '联系人姓名',
+                prefixIcon: Icon(Icons.person_outline_rounded),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('profile_address_phone_field'),
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                hintText: '联系电话',
+                prefixIcon: Icon(Icons.phone_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('profile_address_field'),
+              controller: addressController,
+              decoration: const InputDecoration(
+                hintText: '详细地址',
+                prefixIcon: Icon(Icons.location_on_outlined),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -953,20 +1004,29 @@ class _AddressManagementScreenState extends State<_AddressManagementScreen> {
           ),
           FilledButton(
             key: const ValueKey('add_profile_address_button'),
-            onPressed: () {
-              final address = controller.text.trim();
-              if (address.isEmpty) {
+            onPressed: () async {
+              final name = nameController.text.trim();
+              final phone = phoneController.text.trim();
+              final address = addressController.text.trim();
+              if (name.isEmpty || phone.isEmpty || address.isEmpty) {
+                return;
+              }
+              final saved = await widget.onAddAddress(name, phone, address);
+              if (!saved || !context.mounted) {
                 return;
               }
               setState(() => _addresses.add(address));
-              widget.onAddAddress(address);
               Navigator.pop(context);
             },
             child: const Text('保存'),
           ),
         ],
       ),
-    ).whenComplete(controller.dispose);
+    ).whenComplete(() {
+      nameController.dispose();
+      phoneController.dispose();
+      addressController.dispose();
+    });
   }
 
   @override
@@ -1280,46 +1340,7 @@ class _PointsMallScreen extends StatefulWidget {
 
   final int points;
   final List<_MallItem> items;
-  final bool Function(_MallItem item) onRedeem;
-
-  static const defaultItems = [
-    _MallItem(
-      id: 'MALL-001',
-      name: '上门配送立减券',
-      desc: '适用于上门配送服务',
-      points: 120,
-      icon: Icons.card_giftcard_rounded,
-      color: Color(0xFFE53935),
-      type: _MallItemType.coupon,
-    ),
-    _MallItem(
-      id: 'MALL-002',
-      name: '配送优先券',
-      desc: '可优先安排骑手上门配送',
-      points: 220,
-      icon: Icons.confirmation_number_rounded,
-      color: Color(0xFFFF8C00),
-      type: _MallItemType.coupon,
-    ),
-    _MallItem(
-      id: 'MALL-003',
-      name: '抽纸一提',
-      desc: '到清河村中心驿站领取',
-      points: 360,
-      icon: Icons.inventory_2_rounded,
-      color: Color(0xFF1677FF),
-      type: _MallItemType.goods,
-    ),
-    _MallItem(
-      id: 'MALL-004',
-      name: '农家土鸡蛋 6 枚',
-      desc: '每日限量，兑换后站点自提',
-      points: 520,
-      icon: Icons.egg_alt_rounded,
-      color: Color(0xFF8D6E63),
-      type: _MallItemType.goods,
-    ),
-  ];
+  final Future<bool> Function(_MallItem item) onRedeem;
 
   @override
   State<_PointsMallScreen> createState() => _PointsMallScreenState();
@@ -1328,12 +1349,15 @@ class _PointsMallScreen extends StatefulWidget {
 class _PointsMallScreenState extends State<_PointsMallScreen> {
   late int _points = widget.points;
 
-  void _redeem(_MallItem item) {
-    final success = widget.onRedeem(item);
+  Future<void> _redeem(_MallItem item) async {
+    final success = await widget.onRedeem(item);
     if (!success) {
       return;
     }
 
+    if (!mounted) {
+      return;
+    }
     setState(() => _points -= item.points);
     ScaffoldMessenger.of(
       context,

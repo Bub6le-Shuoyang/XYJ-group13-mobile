@@ -16,7 +16,7 @@ class PackageCubit extends Cubit<PackageState> {
       state.copyWith(
         packages: result.data ?? const [],
         isLoading: false,
-        isFallbackData: result.message.contains('模拟'),
+        isFallbackData: false,
         message: result.message,
       ),
     );
@@ -59,7 +59,7 @@ class PackageCubit extends Cubit<PackageState> {
     emit(
       state.copyWith(
         packages: updatedPackages,
-        isFallbackData: result.message.contains('模拟') || state.isFallbackData,
+        isFallbackData: false,
         message: result.message,
       ),
     );
@@ -98,7 +98,7 @@ class PackageCubit extends Cubit<PackageState> {
       emit(
         state.copyWith(
           packages: updatedPackages,
-          isFallbackData: result.message.contains('模拟') || state.isFallbackData,
+          isFallbackData: false,
           message: result.message,
         ),
       );

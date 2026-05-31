@@ -83,25 +83,18 @@ class _NewsScreenState extends State<NewsScreen> {
                     return;
                   }
                   final result = await _appDataService.publishNews(text);
-                  if (!context.mounted || result.data != true) {
+                  final post = result.data;
+                  if (!context.mounted) {
+                    return;
+                  }
+                  if (!result.isSuccess || post == null) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(result.message)));
                     return;
                   }
                   setState(() {
-                    _posts.insert(
-                      0,
-                      NewsPostVO(
-                        id: 'LOCAL-${DateTime.now().millisecondsSinceEpoch}',
-                        title: '村民发布',
-                        content: text,
-                        tag: '村民分享',
-                        authorName: '村民张三',
-                        stationName: '清河村中心驿站',
-                        publishedAtText: '刚刚',
-                        likes: 0,
-                        comments: const [],
-                        isUrgent: false,
-                      ),
-                    );
+                    _posts.insert(0, post);
                   });
                   Navigator.pop(context);
                 },

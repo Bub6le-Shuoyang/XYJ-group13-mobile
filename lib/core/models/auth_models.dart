@@ -1,30 +1,37 @@
 class CaptchaResponseVO {
-  final String captchaUuid;
-  final String captchaImage;
+  final String captchaId;
+  final String captchaImageBase64;
 
-  CaptchaResponseVO({required this.captchaUuid, required this.captchaImage});
+  CaptchaResponseVO({
+    required this.captchaId,
+    required this.captchaImageBase64,
+  });
 
   factory CaptchaResponseVO.fromJson(Map<String, dynamic> json) {
     return CaptchaResponseVO(
-      captchaUuid: json['captcha_uuid'] as String,
-      captchaImage: json['captcha_image'] as String,
+      captchaId: json['captcha_id'] as String? ?? json['captchaId'] as String,
+      captchaImageBase64:
+          json['captcha_image_base64'] as String? ??
+          json['captchaImageBase64'] as String,
     );
   }
 }
 
 class UserVO {
   final int id;
+  final String? account;
   final String email;
   final String? phone;
-  final String? realName;
+  final String? nickname;
   final String? avatarUrl;
-  final int role;
+  final String role;
 
   UserVO({
     required this.id,
+    this.account,
     required this.email,
     this.phone,
-    this.realName,
+    this.nickname,
     this.avatarUrl,
     required this.role,
   });
@@ -32,11 +39,12 @@ class UserVO {
   factory UserVO.fromJson(Map<String, dynamic> json) {
     return UserVO(
       id: json['id'] as int,
-      email: json['email'] as String,
+      account: json['account'] as String?,
+      email: json['email'] as String? ?? '',
       phone: json['phone'] as String?,
-      realName: json['realName'] as String?,
-      avatarUrl: json['avatarUrl'] as String?,
-      role: json['role'] as int? ?? 0,
+      nickname: json['nickname'] as String?,
+      avatarUrl: json['avatar_url'] as String? ?? json['avatarUrl'] as String?,
+      role: json['role'] as String? ?? '',
     );
   }
 }

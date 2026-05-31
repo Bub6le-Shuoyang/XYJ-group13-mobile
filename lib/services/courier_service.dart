@@ -1,7 +1,6 @@
 import '../core/models/result.dart';
 import '../core/models/business_models.dart';
 import '../core/network/api_client.dart';
-import 'mock_data.dart';
 
 class CourierService {
   final ApiClient _apiClient = ApiClient();
@@ -20,18 +19,12 @@ class CourierService {
 
   // 2. 配送员抢单
   Future<Result<bool>> grabTask(String taskId) async {
-    return _apiClient.post<bool>(
-      '/courier/tasks/$taskId/grab',
-      fromJsonT: (data) => data as bool,
-    );
+    return _postTaskAction('/courier/tasks/$taskId/grab');
   }
 
   // 3. 确认取件 (前往取件位置)
   Future<Result<bool>> pickupTask(String taskId) async {
-    return _apiClient.post<bool>(
-      '/courier/tasks/$taskId/pickup',
-      fromJsonT: (data) => data as bool,
-    );
+    return _postTaskAction('/courier/tasks/$taskId/pickup');
   }
 
   // 4. 确认送达 (到达送达位置)
@@ -39,10 +32,9 @@ class CourierService {
     String taskId, {
     String? deliverImage,
   }) async {
-    return _apiClient.post<bool>(
+    return _postTaskAction(
       '/courier/tasks/$taskId/deliver',
       data: deliverImage != null ? {'deliver_image': deliverImage} : null,
-      fromJsonT: (data) => data as bool,
     );
   }
 
@@ -52,15 +44,7 @@ class CourierService {
       '/courier/earnings',
       fromJsonT: (data) => EarningsVO.fromJson(data),
     );
-    if (result.isSuccess && result.data != null) {
-      return result;
-    }
-    return Result(
-      code: 200,
-      message: '收益接口失败，已使用模拟收益：${result.message}',
-      timestamp: DateTime.now().millisecondsSinceEpoch,
-      data: MockData.earnings,
-    );
+    return result;
   }
 
   Future<Result<CourierProfileVO>> getProfile() async {
@@ -68,14 +52,20 @@ class CourierService {
       '/courier/profile',
       fromJsonT: (data) => CourierProfileVO.fromJson(data),
     );
-    if (result.isSuccess && result.data != null) {
-      return result;
-    }
+    return result;
+  }
+
+  Future<Result<bool>> _postTaskAction(String path, {dynamic data}) async {
+    final result = await _apiClient.post<TaskVO>(
+      path,
+      data: data,
+      fromJsonT: (data) => TaskVO.fromJson(data as Map<String, dynamic>),
+    );
     return Result(
-      code: 200,
-      message: '骑手资料接口失败，已使用模拟资料：${result.message}',
-      timestamp: DateTime.now().millisecondsSinceEpoch,
-      data: MockData.courierProfile,
+      code: result.code,
+      message: result.message,
+      timestamp: result.timestamp,
+      data: result.isSuccess && result.data != null,
     );
   }
 }

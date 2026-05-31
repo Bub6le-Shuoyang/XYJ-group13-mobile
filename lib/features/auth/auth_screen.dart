@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'state/auth_cubit.dart';
+import 'widgets/register_view.dart';
 import 'widgets/user_login_view.dart';
 import 'widgets/staff_login_view.dart';
 
@@ -13,6 +12,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool _showStaffLogin = false;
+  bool _showRegister = false;
 
   @override
   Widget build(BuildContext context) {
@@ -89,51 +89,17 @@ class _AuthScreenState extends State<AuthScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 300),
-                          child: !_showStaffLogin
-                              ? UserLoginView(
-                                  key: const ValueKey('user_login'),
-                                  onLogin: (role) => context
-                                      .read<AuthCubit>()
-                                      .forceLogin(role),
-                                )
-                              : StaffLoginView(
-                                  key: const ValueKey('staff_login'),
-                                  onForceLogin: (role) => context
-                                      .read<AuthCubit>()
-                                      .forceLogin(role),
-                                ),
+                          child: _buildAuthForm(),
                         ),
                       ),
                       const SizedBox(height: 24),
-                      TextButton(
-                        key: ValueKey(
-                          _showStaffLogin
-                              ? 'user_entrance_button'
-                              : 'staff_entrance_button',
+                      if (!_showRegister)
+                        _EntranceSwitchButton(
+                          showStaffLogin: _showStaffLogin,
+                          onPressed: () => setState(
+                            () => _showStaffLogin = !_showStaffLogin,
+                          ),
                         ),
-                        onPressed: () =>
-                            setState(() => _showStaffLogin = !_showStaffLogin),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _showStaffLogin
-                                  ? Icons.arrow_back_ios
-                                  : Icons.admin_panel_settings_outlined,
-                              size: 16,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              _showStaffLogin ? '返回用户登录' : '工作人员入口',
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                       const SizedBox(height: 32),
                     ],
                   ),
@@ -142,6 +108,65 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAuthForm() {
+    if (_showRegister) {
+      return RegisterView(
+        key: const ValueKey('register'),
+        onBackToLogin: () => setState(() {
+          _showRegister = false;
+          _showStaffLogin = false;
+        }),
+      );
+    }
+    if (_showStaffLogin) {
+      return const StaffLoginView(key: ValueKey('staff_login'));
+    }
+    return UserLoginView(
+      key: const ValueKey('user_login'),
+      onRegisterTap: () => setState(() {
+        _showRegister = true;
+        _showStaffLogin = false;
+      }),
+    );
+  }
+}
+
+class _EntranceSwitchButton extends StatelessWidget {
+  const _EntranceSwitchButton({
+    required this.showStaffLogin,
+    required this.onPressed,
+  });
+
+  final bool showStaffLogin;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      key: ValueKey(
+        showStaffLogin ? 'user_entrance_button' : 'staff_entrance_button',
+      ),
+      onPressed: onPressed,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            showStaffLogin
+                ? Icons.arrow_back_ios
+                : Icons.admin_panel_settings_outlined,
+            size: 16,
+            color: Colors.grey,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            showStaffLogin ? '返回用户登录' : '工作人员入口',
+            style: const TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+        ],
       ),
     );
   }

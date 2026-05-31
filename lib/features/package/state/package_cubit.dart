@@ -3,11 +3,13 @@ import '../../../services/package_service.dart';
 import 'package_state.dart';
 
 class PackageCubit extends Cubit<PackageState> {
-  PackageCubit(this._packageService) : super(const PackageState()) {
-    loadPackages();
-  }
+  PackageCubit(this._packageService) : super(const PackageState());
 
   final PackageService _packageService;
+
+  void clearPackages() {
+    emit(const PackageState());
+  }
 
   Future<void> loadPackages() async {
     emit(state.copyWith(isLoading: true, message: null));
@@ -16,8 +18,36 @@ class PackageCubit extends Cubit<PackageState> {
       state.copyWith(
         packages: result.data ?? const [],
         isLoading: false,
-        isFallbackData: result.message.contains('模拟'),
+        isFallbackData: false,
         message: result.message,
+      ),
+    );
+  }
+
+  Future<void> createPackage({
+    required String orderNo,
+    required String stationId,
+    required String receiverName,
+    required String receiverPhone,
+    required String address,
+    required double rewardAmount,
+  }) async {
+    final result = await _packageService.createPackage(
+      orderNo: orderNo,
+      stationId: stationId,
+      receiverName: receiverName,
+      receiverPhone: receiverPhone,
+      address: address,
+      rewardAmount: rewardAmount,
+    );
+    if (!result.isSuccess || result.data == null) {
+      emit(state.copyWith(message: result.message));
+      return;
+    }
+    emit(
+      state.copyWith(
+        packages: [result.data!, ...state.packages],
+        message: '包裹信息已提交，等待站点管理员审批',
       ),
     );
   }
@@ -59,7 +89,7 @@ class PackageCubit extends Cubit<PackageState> {
     emit(
       state.copyWith(
         packages: updatedPackages,
-        isFallbackData: result.message.contains('模拟') || state.isFallbackData,
+        isFallbackData: false,
         message: result.message,
       ),
     );
@@ -98,7 +128,7 @@ class PackageCubit extends Cubit<PackageState> {
       emit(
         state.copyWith(
           packages: updatedPackages,
-          isFallbackData: result.message.contains('模拟') || state.isFallbackData,
+          isFallbackData: false,
           message: result.message,
         ),
       );

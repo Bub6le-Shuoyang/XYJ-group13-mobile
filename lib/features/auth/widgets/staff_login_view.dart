@@ -5,9 +5,7 @@ import '../state/auth_cubit.dart';
 import '../state/auth_state.dart';
 
 class StaffLoginView extends StatefulWidget {
-  const StaffLoginView({super.key, required this.onForceLogin});
-
-  final ValueChanged<AppRole> onForceLogin;
+  const StaffLoginView({super.key});
 
   @override
   State<StaffLoginView> createState() => _StaffLoginViewState();
@@ -30,10 +28,8 @@ class _StaffLoginViewState extends State<StaffLoginView> {
       _selectedRole = role;
       _accountController.text = role == AppRole.admin
           ? 'admin@example.com'
-          : 'courier@example.com';
-      _passwordController.text = role == AppRole.admin
-          ? 'MyPass123!'
-          : '123456';
+          : 'courier01';
+      _passwordController.text = 'MyPass123!';
     });
   }
 
@@ -70,22 +66,14 @@ class _StaffLoginViewState extends State<StaffLoginView> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            title: const Text('网络请求失败'),
+            title: const Text('登录失败'),
             content: Text(
-              '当前 ${_selectedRole.title} 登录接口暂不可用：\n${e.toString()}\n\n是否使用演示模式进入？',
+              '当前 ${_selectedRole.title} 账号无法登录：\n${e.toString().replaceFirst('Exception: ', '')}',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                key: const ValueKey('force_login_button'),
-                onPressed: () {
-                  Navigator.pop(dialogContext);
-                  widget.onForceLogin(_selectedRole);
-                },
-                child: const Text('进入演示模式'),
+                child: const Text('知道了'),
               ),
             ],
           ),

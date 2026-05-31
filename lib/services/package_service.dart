@@ -2,7 +2,6 @@ import '../core/models/business_models.dart';
 import '../core/models/result.dart';
 import '../core/network/api_client.dart';
 import '../features/package/state/package_state.dart';
-import 'mock_data.dart';
 
 class PackageService {
   final ApiClient _apiClient = ApiClient();
@@ -26,7 +25,40 @@ class PackageService {
       );
     }
 
-    return _mockPackages('接口调用失败，已使用本地模拟包裹数据：${result.message}');
+    return Result(
+      code: result.code,
+      message: result.message,
+      timestamp: result.timestamp,
+      data: const [],
+    );
+  }
+
+  Future<Result<VillagePackage>> createPackage({
+    required String orderNo,
+    required String stationId,
+    required String receiverName,
+    required String receiverPhone,
+    required String address,
+    required double rewardAmount,
+  }) async {
+    final result = await _apiClient.post<PackageVO>(
+      '/user/packages',
+      data: {
+        'order_no': orderNo,
+        'station_id': stationId,
+        'receiver_name': receiverName,
+        'receiver_phone': receiverPhone,
+        'address': address,
+        'reward_amount': rewardAmount,
+      },
+      fromJsonT: (data) => PackageVO.fromJson(data as Map<String, dynamic>),
+    );
+    return Result(
+      code: result.code,
+      message: result.message,
+      timestamp: result.timestamp,
+      data: result.data == null ? null : _fromPackageVO(result.data!),
+    );
   }
 
   Future<Result<bool>> updatePackageStatus(
@@ -44,9 +76,8 @@ class PackageService {
         id,
         rewardAmount,
       ),
-      PackageStatus.assigned => await _apiClient.post<bool>(
+      PackageStatus.assigned => await _postAndExpectData(
         '/courier/tasks/$id/grab',
-        fromJsonT: (data) => data as bool,
       ),
       PackageStatus.completed => await _apiClient.post<bool>(
         '/user/packages/$id/confirm',
@@ -64,21 +95,7 @@ class PackageService {
       return result;
     }
 
-    return Result(
-      code: 200,
-      message: '接口调用失败，已在模拟数据中推进状态：${result.message}',
-      timestamp: DateTime.now().millisecondsSinceEpoch,
-      data: true,
-    );
-  }
-
-  Result<List<VillagePackage>> _mockPackages(String message) {
-    return Result(
-      code: 200,
-      message: message,
-      timestamp: DateTime.now().millisecondsSinceEpoch,
-      data: MockData.packages,
-    );
+    return result;
   }
 
   Future<Result<bool>> _publishOutboundTask(
@@ -93,10 +110,27 @@ class PackageService {
       return outbound;
     }
 
-    return _apiClient.post<bool>(
+    final publish = await _apiClient.post<TaskVO>(
       '/admin/tasks',
       data: {'package_id': packageId, 'reward_amount': rewardAmount},
-      fromJsonT: (data) => data as bool,
+      fromJsonT: (data) => TaskVO.fromJson(data as Map<String, dynamic>),
+    );
+
+    return Result(
+      code: publish.code,
+      message: publish.message,
+      timestamp: publish.timestamp,
+      data: publish.isSuccess && publish.data != null,
+    );
+  }
+
+  Future<Result<bool>> _postAndExpectData(String path, {dynamic data}) async {
+    final result = await _apiClient.post<dynamic>(path, data: data);
+    return Result(
+      code: result.code,
+      message: result.message,
+      timestamp: result.timestamp,
+      data: result.isSuccess && result.data != null,
     );
   }
 

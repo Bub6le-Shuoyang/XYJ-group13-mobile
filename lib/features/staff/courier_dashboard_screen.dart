@@ -1,33 +1,114 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/models/business_models.dart';
 import '../../services/courier_service.dart';
-import '../package/state/package_cubit.dart';
 import '../package/state/package_state.dart';
 import '../package/widgets/package_card.dart';
 
 class CourierDashboardScreen extends StatefulWidget {
-  const CourierDashboardScreen({super.key, required this.packages});
-
-  final List<VillagePackage> packages;
+  const CourierDashboardScreen({super.key});
 
   @override
   State<CourierDashboardScreen> createState() => _CourierDashboardScreenState();
 }
 
 class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
+  final _courierService = CourierService();
   int _currentIndex = 0;
+  bool _isLoading = true;
+  String? _message;
+  List<VillagePackage> _availableTasks = const [];
+  List<VillagePackage> _myTasks = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+    final availableResult = await _courierService.getAvailableTasks(size: 50);
+    final mineResult = await _courierService.getMyTasks(
+      status: 'ALL',
+      size: 50,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      if (availableResult.isSuccess && mineResult.isSuccess) {
+        _availableTasks =
+            availableResult.data?.records.map(_fromTaskVO).toList() ?? const [];
+        _myTasks =
+            mineResult.data?.records.map(_fromTaskVO).toList() ?? const [];
+      } else {
+        _availableTasks = const [];
+        _myTasks = const [];
+        _message = !availableResult.isSuccess
+            ? availableResult.message
+            : mineResult.message;
+      }
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _grabTask(String taskId) async {
+    final result = await _courierService.grabTask(taskId);
+    if (!mounted) {
+      return;
+    }
+    if (!result.isSuccess || result.data != true) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.message)));
+      return;
+    }
+    await _loadTasks();
+  }
+
+  Future<void> _verifyPickupCode(String taskId, String pickupCode) async {
+    final result = await _courierService.verifyPickupCode(taskId, pickupCode);
+    if (!mounted) {
+      return;
+    }
+    if (!result.isSuccess || result.data != true) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.message)));
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('取件码核验成功，订单已完成')));
+    await _loadTasks();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final message = _message;
+    if (message != null) {
+      return _CourierErrorView(message: message, onRetry: _loadTasks);
+    }
     return Column(
       children: [
         Expanded(
           child: IndexedStack(
             index: _currentIndex,
             children: [
-              _CourierWorkPage(packages: widget.packages),
-              _CourierProfilePage(packages: widget.packages),
+              _CourierWorkPage(
+                availableTasks: _availableTasks,
+                myTasks: _myTasks,
+                onRefresh: _loadTasks,
+                onGrabTask: _grabTask,
+                onVerifyPickupCode: _verifyPickupCode,
+              ),
+              _CourierProfilePage(packages: _myTasks),
             ],
           ),
         ),
@@ -50,12 +131,45 @@ class _CourierDashboardScreenState extends State<CourierDashboardScreen> {
       ],
     );
   }
+
+  VillagePackage _fromTaskVO(TaskVO task) {
+    final status = switch (task.status.toUpperCase()) {
+      'AVAILABLE' || 'TASK_PUBLISHED' => PackageStatus.taskPublished,
+      'ASSIGNED' || 'DELIVERING' => PackageStatus.assigned,
+      'COMPLETED' => PackageStatus.completed,
+      _ => PackageStatus.taskPublished,
+    };
+    return VillagePackage(
+      id: task.taskId,
+      pickupCode: task.pickupCodeMasked,
+      name: task.packageName,
+      sender: '驿站',
+      receiver: '村民',
+      address: task.deliverAddress,
+      reward: task.rewardAmount.round(),
+      status: status,
+      timeline: [status.label],
+      lat: 30.51,
+      lng: 114.31,
+    );
+  }
 }
 
 class _CourierWorkPage extends StatelessWidget {
-  const _CourierWorkPage({required this.packages});
+  const _CourierWorkPage({
+    required this.availableTasks,
+    required this.myTasks,
+    required this.onRefresh,
+    required this.onGrabTask,
+    required this.onVerifyPickupCode,
+  });
 
-  final List<VillagePackage> packages;
+  final List<VillagePackage> availableTasks;
+  final List<VillagePackage> myTasks;
+  final Future<void> Function() onRefresh;
+  final Future<void> Function(String taskId) onGrabTask;
+  final Future<void> Function(String taskId, String pickupCode)
+  onVerifyPickupCode;
 
   Future<void> _showPickupCodeDialog(
     BuildContext context,
@@ -77,119 +191,109 @@ class _CourierWorkPage extends StatelessWidget {
       return;
     }
 
-    if (normalizedCode != package.pickupCode.toUpperCase()) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('取件码不匹配，请和用户核对后重试')));
-      return;
-    }
-
-    final matchedPackage = await context.read<PackageCubit>().verifyPickupCode(
-      normalizedCode,
-    );
-    if (!context.mounted) {
-      return;
-    }
-    if (matchedPackage == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('未找到该取件码，请核对后重试')));
-      return;
-    }
-
-    if (matchedPackage.status != PackageStatus.assigned) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('该订单当前状态为「${matchedPackage.status.label}」，无法签收'),
-        ),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('${package.name} 已完成上门签收')));
+    await onVerifyPickupCode(package.id, normalizedCode);
   }
 
   @override
   Widget build(BuildContext context) {
-    final availableTasks = packages
-        .where((p) => p.status == PackageStatus.taskPublished)
-        .toList();
-    final myTasks = packages
-        .where((p) => p.status == PackageStatus.assigned)
-        .toList();
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.flash_on_rounded,
+                  label: '可抢任务',
+                  value: '${availableTasks.length}',
+                  color: const Color(0xFFFF8C00),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.local_shipping_rounded,
+                  label: '派送中',
+                  value: '${myTasks.length}',
+                  color: const Color(0xFF4CAF50),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _SectionHeader(
+            icon: Icons.flash_on_rounded,
+            title: '可抢任务',
+            count: availableTasks.length,
+            color: const Color(0xFFFF8C00),
+          ),
+          const SizedBox(height: 10),
+          if (availableTasks.isEmpty)
+            _EmptyPlaceholder(text: '暂无可抢任务')
+          else
+            ...availableTasks.map(
+              (p) => PackageCard(
+                key: ValueKey('grab_${p.id}'),
+                package: p,
+                actionLabel: '立即抢单',
+                actionIcon: Icons.touch_app_rounded,
+                onPressed: () => onGrabTask(p.id),
+              ),
+            ),
+          const SizedBox(height: 24),
+          _SectionHeader(
+            icon: Icons.local_shipping_rounded,
+            title: '我的派送',
+            count: myTasks.length,
+            color: const Color(0xFF4CAF50),
+          ),
+          const SizedBox(height: 10),
+          if (myTasks.isEmpty)
+            _EmptyPlaceholder(text: '暂无派送中任务')
+          else
+            ...myTasks.map(
+              (p) => PackageCard(
+                key: ValueKey('deliver_${p.id}'),
+                package: p,
+                actionLabel: '验证取件码',
+                actionIcon: Icons.qr_code_scanner_rounded,
+                onPressed: () => _showPickupCodeDialog(context, p),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      children: [
-        Row(
+class _CourierErrorView extends StatelessWidget {
+  const _CourierErrorView({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: _StatCard(
-                icon: Icons.flash_on_rounded,
-                label: '可抢任务',
-                value: '${availableTasks.length}',
-                color: const Color(0xFFFF8C00),
-              ),
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: Colors.grey,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.local_shipping_rounded,
-                label: '派送中',
-                value: '${myTasks.length}',
-                color: const Color(0xFF4CAF50),
-              ),
-            ),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onRetry, child: const Text('重新获取')),
           ],
         ),
-        const SizedBox(height: 24),
-        _SectionHeader(
-          icon: Icons.flash_on_rounded,
-          title: '可抢任务',
-          count: availableTasks.length,
-          color: const Color(0xFFFF8C00),
-        ),
-        const SizedBox(height: 10),
-        if (availableTasks.isEmpty)
-          _EmptyPlaceholder(text: '暂无可抢任务')
-        else
-          ...availableTasks.map(
-            (p) => PackageCard(
-              key: ValueKey('grab_${p.id}'),
-              package: p,
-              actionLabel: '立即抢单',
-              actionIcon: Icons.touch_app_rounded,
-              onPressed: () => context.read<PackageCubit>().changeStatus(
-                p.id,
-                PackageStatus.assigned,
-                '配送员抢单成功',
-                courier: '当前配送员',
-              ),
-            ),
-          ),
-        const SizedBox(height: 24),
-        _SectionHeader(
-          icon: Icons.local_shipping_rounded,
-          title: '我的派送',
-          count: myTasks.length,
-          color: const Color(0xFF4CAF50),
-        ),
-        const SizedBox(height: 10),
-        if (myTasks.isEmpty)
-          _EmptyPlaceholder(text: '暂无派送中任务')
-        else
-          ...myTasks.map(
-            (p) => PackageCard(
-              key: ValueKey('deliver_${p.id}'),
-              package: p,
-              actionLabel: '验证取件码',
-              actionIcon: Icons.qr_code_scanner_rounded,
-              onPressed: () => _showPickupCodeDialog(context, p),
-            ),
-          ),
-      ],
+      ),
     );
   }
 }

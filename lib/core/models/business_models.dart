@@ -45,6 +45,16 @@ String _readString(
   return fallback;
 }
 
+String? _readNullableString(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value != null && value.toString().isNotEmpty) {
+      return value.toString();
+    }
+  }
+  return null;
+}
+
 List<String> _readStringList(Map<String, dynamic> json, List<String> keys) {
   for (final key in keys) {
     final value = json[key];
@@ -136,6 +146,7 @@ class TaskVO {
   final String deliverAddress;
   final double rewardAmount;
   final String status;
+  final String pickupCodeMasked;
 
   TaskVO({
     required this.taskId,
@@ -145,17 +156,22 @@ class TaskVO {
     required this.deliverAddress,
     required this.rewardAmount,
     required this.status,
+    required this.pickupCodeMasked,
   });
 
   factory TaskVO.fromJson(Map<String, dynamic> json) {
     return TaskVO(
-      taskId: json['task_id'] as String,
-      packageId: json['package_id'] as String,
-      packageName: json['package_name'] as String,
-      pickupAddress: json['pickup_address'] as String,
-      deliverAddress: json['deliver_address'] as String,
-      rewardAmount: (json['reward_amount'] as num).toDouble(),
-      status: json['status'] as String,
+      taskId: _readString(json, ['task_id', 'taskId', 'id']),
+      packageId: _readString(json, ['package_id', 'packageId']),
+      packageName: _readString(json, ['package_name', 'packageName'], '普通包裹'),
+      pickupAddress: _readString(json, ['pickup_address', 'pickupAddress']),
+      deliverAddress: _readString(json, ['deliver_address', 'deliverAddress']),
+      rewardAmount: _readDouble(json, ['reward_amount', 'rewardAmount']),
+      status: _readString(json, ['status']),
+      pickupCodeMasked: _readString(json, [
+        'pickup_code_masked',
+        'pickupCodeMasked',
+      ]),
     );
   }
 }
@@ -173,9 +189,14 @@ class EarningsVO {
 
   factory EarningsVO.fromJson(Map<String, dynamic> json) {
     return EarningsVO(
-      totalEarnings: (json['total_earnings'] as num).toDouble(),
-      todayEarnings: (json['today_earnings'] as num).toDouble(),
-      completedOrders: json['completed_orders'] as int,
+      totalEarnings: _readDouble(json, ['total_earnings', 'totalEarnings']),
+      todayEarnings: _readDouble(json, ['today_earnings', 'todayEarnings']),
+      completedOrders: _readInt(json, [
+        'completed_orders',
+        'completedOrders',
+        'completed_tasks',
+        'completedTasks',
+      ]),
     );
   }
 }
@@ -256,6 +277,7 @@ class NewsPostVO {
   final String stationName;
   final String publishedAtText;
   final int likes;
+  final int commentsCount;
   final List<String> comments;
   final bool isUrgent;
 
@@ -268,11 +290,13 @@ class NewsPostVO {
     required this.stationName,
     required this.publishedAtText,
     required this.likes,
+    required this.commentsCount,
     required this.comments,
     required this.isUrgent,
   });
 
   factory NewsPostVO.fromJson(Map<String, dynamic> json) {
+    final comments = _readStringList(json, ['comments']);
     return NewsPostVO(
       id: _readString(json, ['id', 'post_id', 'postId']),
       title: _readString(json, ['title']),
@@ -280,16 +304,39 @@ class NewsPostVO {
       tag: _readString(json, ['tag']),
       authorName: _readString(json, ['author_name', 'authorName'], '站点管理员'),
       stationName: _readString(json, ['station_name', 'stationName'], '清河村驿站'),
-      publishedAtText: _readString(json, [
-        'published_at_text',
-        'publishedAtText',
-      ], '刚刚'),
+      publishedAtText: _readPublishedAtText(json),
       likes: _readInt(json, ['likes']),
-      comments: _readStringList(json, ['comments']),
+      commentsCount: comments.isNotEmpty
+          ? comments.length
+          : _readInt(json, ['comments_count', 'commentsCount']),
+      comments: comments,
       isUrgent:
           json['is_urgent'] as bool? ?? json['isUrgent'] as bool? ?? false,
     );
   }
+}
+
+String _readPublishedAtText(Map<String, dynamic> json) {
+  final text = _readString(json, ['published_at_text', 'publishedAtText']);
+  if (text.isNotEmpty) {
+    return text;
+  }
+  final rawTime = _readString(json, ['publish_time', 'publishTime']);
+  final time = DateTime.tryParse(rawTime);
+  if (time == null) {
+    return '刚刚';
+  }
+  final diff = DateTime.now().difference(time.toLocal());
+  if (diff.inMinutes < 1) {
+    return '刚刚';
+  }
+  if (diff.inHours < 1) {
+    return '${diff.inMinutes}分钟前';
+  }
+  if (diff.inDays < 1) {
+    return '${diff.inHours}小时前';
+  }
+  return '${diff.inDays}天前';
 }
 
 enum MallItemType { coupon, goods }
@@ -300,6 +347,8 @@ class MallItemVO {
   final String desc;
   final int points;
   final MallItemType type;
+  final int stock;
+  final String? imageUrl;
 
   MallItemVO({
     required this.id,
@@ -307,6 +356,8 @@ class MallItemVO {
     required this.desc,
     required this.points,
     required this.type,
+    required this.stock,
+    this.imageUrl,
   });
 
   factory MallItemVO.fromJson(Map<String, dynamic> json) {
@@ -315,10 +366,63 @@ class MallItemVO {
       id: _readString(json, ['id', 'item_id', 'itemId']),
       name: _readString(json, ['name']),
       desc: _readString(json, ['desc', 'description']),
-      points: _readInt(json, ['points']),
+      points: _readInt(json, ['points', 'points_required', 'pointsRequired']),
       type: type == 'coupon' ? MallItemType.coupon : MallItemType.goods,
+      stock: _readInt(json, ['stock']),
+      imageUrl: _readNullableString(json, ['image_url', 'imageUrl']),
     );
   }
+}
+
+class RedeemRecordVO {
+  final String id;
+  final String itemName;
+  final int pointsCost;
+  final int remainPoints;
+  final String status;
+
+  RedeemRecordVO({
+    required this.id,
+    required this.itemName,
+    required this.pointsCost,
+    required this.remainPoints,
+    required this.status,
+  });
+
+  factory RedeemRecordVO.fromJson(Map<String, dynamic> json) {
+    return RedeemRecordVO(
+      id: _readString(json, ['id', 'record_id', 'recordId']),
+      itemName: _readString(json, ['item_name', 'itemName']),
+      pointsCost: _readInt(json, ['points_cost', 'pointsCost']),
+      remainPoints: _readInt(json, ['remain_points', 'remainPoints']),
+      status: _readString(json, ['status']),
+    );
+  }
+}
+
+class SplashAdVO {
+  final String adNo;
+  final String name;
+  final String imageUrl;
+  final String targetUrl;
+
+  const SplashAdVO({
+    required this.adNo,
+    required this.name,
+    required this.imageUrl,
+    required this.targetUrl,
+  });
+
+  factory SplashAdVO.fromJson(Map<String, dynamic> json) {
+    return SplashAdVO(
+      adNo: _readString(json, ['ad_no', 'adNo']),
+      name: _readString(json, ['name']),
+      imageUrl: _readString(json, ['image_url', 'imageUrl']),
+      targetUrl: _readString(json, ['target_url', 'targetUrl']),
+    );
+  }
+
+  bool get isValid => imageUrl.isNotEmpty && targetUrl.isNotEmpty;
 }
 
 class UserProfileVO {

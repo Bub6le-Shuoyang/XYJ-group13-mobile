@@ -1,108 +1,186 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../package/state/package_cubit.dart';
+import '../../services/admin_service.dart';
 import '../package/state/package_state.dart';
 import '../package/widgets/package_card.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({super.key, required this.packages});
+class AdminDashboardScreen extends StatefulWidget {
+  const AdminDashboardScreen({super.key});
 
-  final List<VillagePackage> packages;
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  final _adminService = AdminService();
+  bool _isLoading = true;
+  String? _message;
+  List<VillagePackage> _packages = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPackages();
+  }
+
+  Future<void> _loadPackages() async {
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+    final result = await _adminService.getPackages();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      if (result.isSuccess) {
+        _packages = result.data ?? const [];
+      } else {
+        _packages = const [];
+        _message = result.message;
+      }
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _inboundPackage(String packageId) async {
+    final current = _packages.firstWhere((item) => item.id == packageId);
+    final result = await _adminService.approvePackage(
+      packageId,
+      current.reward.toDouble(),
+    );
+    if (!mounted) {
+      return;
+    }
+    if (!result.isSuccess || result.data != true) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.message)));
+      return;
+    }
+    await _loadPackages();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final message = _message;
+    if (message != null) {
+      return _AdminErrorView(message: message, onRetry: _loadPackages);
+    }
+    final packages = _packages;
     final pendingInbound = packages
         .where((p) => p.status == PackageStatus.pendingInbound)
         .toList();
-    final inStock = packages
-        .where((p) => p.status == PackageStatus.inStock)
+    final waitingCourier = packages
+        .where((p) => p.status == PackageStatus.taskPublished)
         .toList();
     final completed = packages
         .where((p) => p.status == PackageStatus.completed)
         .length;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      children: [
-        Row(
+    return RefreshIndicator(
+      onRefresh: _loadPackages,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.inbox_rounded,
+                  label: '待审批',
+                  value: '${pendingInbound.length}',
+                  color: const Color(0xFF9E9E9E),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.outbox_rounded,
+                  label: '待接单',
+                  value: '${waitingCourier.length}',
+                  color: const Color(0xFF1677FF),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.check_circle_rounded,
+                  label: '已完成',
+                  value: '$completed',
+                  color: const Color(0xFF4CAF50),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _SectionHeader(
+            icon: Icons.inbox_rounded,
+            title: '包裹审批',
+            count: pendingInbound.length,
+            color: const Color(0xFF9E9E9E),
+          ),
+          const SizedBox(height: 10),
+          if (pendingInbound.isEmpty)
+            const _EmptyPlaceholder(text: '暂无待审批包裹')
+          else
+            ...pendingInbound.map(
+              (p) => PackageCard(
+                key: ValueKey('inbound_${p.id}'),
+                package: p,
+                actionLabel: '审批通过',
+                actionIcon: Icons.verified_rounded,
+                onPressed: () => _inboundPackage(p.id),
+              ),
+            ),
+          const SizedBox(height: 24),
+          _SectionHeader(
+            icon: Icons.outbox_rounded,
+            title: '待骑手接单',
+            count: waitingCourier.length,
+            color: const Color(0xFF1677FF),
+          ),
+          const SizedBox(height: 10),
+          if (waitingCourier.isEmpty)
+            const _EmptyPlaceholder(text: '暂无待骑手接单包裹')
+          else
+            ...waitingCourier.map(
+              (p) => PackageCard(key: ValueKey('waiting_${p.id}'), package: p),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminErrorView extends StatelessWidget {
+  const _AdminErrorView({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: _StatCard(
-                icon: Icons.inbox_rounded,
-                label: '待入库',
-                value: '${pendingInbound.length}',
-                color: const Color(0xFF9E9E9E),
-              ),
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: Colors.grey,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.outbox_rounded,
-                label: '待出库',
-                value: '${inStock.length}',
-                color: const Color(0xFF1677FF),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.check_circle_rounded,
-                label: '已完成',
-                value: '$completed',
-                color: const Color(0xFF4CAF50),
-              ),
-            ),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onRetry, child: const Text('重新获取')),
           ],
         ),
-        const SizedBox(height: 24),
-        _SectionHeader(
-          icon: Icons.inbox_rounded,
-          title: '包裹入库',
-          count: pendingInbound.length,
-          color: const Color(0xFF9E9E9E),
-        ),
-        const SizedBox(height: 10),
-        if (pendingInbound.isEmpty)
-          const _EmptyPlaceholder(text: '暂无待入库包裹')
-        else
-          ...pendingInbound.map(
-            (p) => PackageCard(
-              key: ValueKey('inbound_${p.id}'),
-              package: p,
-              actionLabel: '确认入库',
-              actionIcon: Icons.inventory_2_rounded,
-              onPressed: () => context.read<PackageCubit>().changeStatus(
-                p.id,
-                PackageStatus.inStock,
-                '站点管理员确认包裹入库',
-              ),
-            ),
-          ),
-        const SizedBox(height: 24),
-        _SectionHeader(
-          icon: Icons.outbox_rounded,
-          title: '包裹出库',
-          count: inStock.length,
-          color: const Color(0xFF1677FF),
-        ),
-        const SizedBox(height: 10),
-        if (inStock.isEmpty)
-          const _EmptyPlaceholder(text: '暂无待出库包裹')
-        else
-          ...inStock.map(
-            (p) => PackageCard(
-              key: ValueKey('outbound_${p.id}'),
-              package: p,
-              actionLabel: '确认出库',
-              actionIcon: Icons.outbox_rounded,
-              onPressed: () => context.read<PackageCubit>().changeStatus(
-                p.id,
-                PackageStatus.taskPublished,
-                '站点管理员确认包裹出库，等待骑手接单',
-              ),
-            ),
-          ),
-      ],
+      ),
     );
   }
 }

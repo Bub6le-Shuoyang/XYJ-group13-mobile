@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/models/app_role.dart';
 import '../auth/state/auth_cubit.dart';
-import '../package/state/package_cubit.dart';
-import '../package/state/package_state.dart';
 import 'admin_dashboard_screen.dart';
 import 'courier_dashboard_screen.dart';
 
@@ -27,19 +25,13 @@ class RoleHomeScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: BlocBuilder<PackageCubit, PackageState>(
-          builder: (context, state) {
-            return switch (role) {
-              AppRole.villager => const Center(
-                child: Text('Villager role should not be here'),
-              ),
-              AppRole.courier => CourierDashboardScreen(
-                packages: state.packages,
-              ),
-              AppRole.admin => AdminDashboardScreen(packages: state.packages),
-            };
-          },
-        ),
+        child: switch (role) {
+          AppRole.villager => const Center(
+            child: Text('Villager role should not be here'),
+          ),
+          AppRole.courier => const CourierDashboardScreen(),
+          AppRole.admin => const AdminDashboardScreen(),
+        },
       ),
     );
   }

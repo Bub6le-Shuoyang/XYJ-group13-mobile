@@ -1,10 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/models/app_role.dart';
+import '../state/auth_cubit.dart';
+import '../state/auth_state.dart';
 
-class UserLoginView extends StatelessWidget {
-  const UserLoginView({super.key, required this.onLogin});
+class UserLoginView extends StatefulWidget {
+  const UserLoginView({super.key, required this.onRegisterTap});
 
-  final ValueChanged<AppRole> onLogin;
+  final VoidCallback onRegisterTap;
+
+  @override
+  State<UserLoginView> createState() => _UserLoginViewState();
+}
+
+class _UserLoginViewState extends State<UserLoginView> {
+  final _accountController = TextEditingController(text: 'user01@example.com');
+  final _passwordController = TextEditingController(text: 'MyPass123!');
+
+  @override
+  void dispose() {
+    _accountController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    final account = _accountController.text.trim();
+    final password = _passwordController.text.trim();
+    try {
+      await context.read<AuthCubit>().login(
+        AppRole.villager,
+        account,
+        password,
+      );
+      if (!mounted) {
+        return;
+      }
+      final user = context.read<AuthCubit>().state.user;
+      final loginName = user?.nickname?.isNotEmpty == true
+          ? user!.nickname!
+          : account;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('登录成功: $loginName')));
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +95,9 @@ class UserLoginView extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              const TextField(
+              TextField(
                 key: ValueKey('user_email_field'),
+                controller: _accountController,
                 decoration: InputDecoration(
                   hintText: '请输入手机号 / 邮箱',
                   prefixIcon: Icon(Icons.phone_iphone_rounded, size: 20),
@@ -57,11 +105,12 @@ class UserLoginView extends StatelessWidget {
                 keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 14),
-              const TextField(
+              TextField(
                 key: ValueKey('user_password_field'),
+                controller: _passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
-                  hintText: '请输入密码 / 验证码',
+                  hintText: '请输入密码',
                   prefixIcon: Icon(Icons.lock_outline_rounded, size: 20),
                 ),
               ),
@@ -69,24 +118,52 @@ class UserLoginView extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: null,
                   child: Text(
-                    '获取验证码',
-                    style: TextStyle(color: colorScheme.primary, fontSize: 13),
+                    '当前仅支持账号密码登录',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 13),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
-              FilledButton(
-                key: const ValueKey('user_login_button'),
-                onPressed: () => onLogin(AppRole.villager),
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('登录 / 注册'),
+              BlocBuilder<AuthCubit, AuthState>(
+                builder: (context, state) {
+                  return FilledButton(
+                    key: const ValueKey('user_login_button'),
+                    onPressed: state.isLoading ? null : _handleLogin,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: state.isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('登录'),
+                  );
+                },
               ),
               const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '还没有账号？',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                  ),
+                  TextButton(
+                    key: const ValueKey('open_register_button'),
+                    onPressed: widget.onRegisterTap,
+                    child: const Text('立即注册'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
               Row(
                 children: [
                   Expanded(child: Divider(color: Colors.grey[200])),
@@ -107,13 +184,13 @@ class UserLoginView extends StatelessWidget {
                   _SocialIcon(
                     icon: Icons.wechat_rounded,
                     color: const Color(0xFF07C160),
-                    onTap: () => onLogin(AppRole.villager),
+                    onTap: () => _showPasswordOnlyTip(context),
                   ),
                   const SizedBox(width: 32),
                   _SocialIcon(
                     icon: Icons.phone_android_rounded,
                     color: const Color(0xFF1677FF),
-                    onTap: () => onLogin(AppRole.villager),
+                    onTap: () => _showPasswordOnlyTip(context),
                   ),
                 ],
               ),
@@ -122,6 +199,12 @@ class UserLoginView extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  void _showPasswordOnlyTip(BuildContext context) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('当前仅支持账号密码登录')));
   }
 }
 

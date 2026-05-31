@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/models/app_role.dart';
 import 'services/auth_service.dart';
 import 'services/package_service.dart';
+import 'features/ads/splash_ad_gate.dart';
 import 'features/auth/auth_screen.dart';
 import 'features/auth/state/auth_cubit.dart';
 import 'features/auth/state/auth_state.dart';
@@ -23,7 +24,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => AuthCubit(AuthService())),
+        BlocProvider(create: (_) => AuthCubit(AuthService())..restoreSession()),
         BlocProvider(create: (_) => PackageCubit(PackageService())),
       ],
       child: MaterialApp(
@@ -93,12 +94,17 @@ class MyApp extends StatelessWidget {
         ),
         home: BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) {
+            if (state.isLoading) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
             if (state.role == null) {
               return const AuthScreen();
             } else if (state.role == AppRole.villager) {
-              return const UserMainScreen();
+              return const SplashAdGate(child: UserMainScreen());
             } else {
-              return RoleHomeScreen(role: state.role!);
+              return SplashAdGate(child: RoleHomeScreen(role: state.role!));
             }
           },
         ),

@@ -4,6 +4,7 @@ import '../news/news_screen.dart';
 import '../profile/profile_screen.dart';
 import 'villager_dashboard_screen.dart';
 import '../auth/state/auth_cubit.dart';
+import '../package/state/package_cubit.dart';
 
 class UserMainScreen extends StatefulWidget {
   const UserMainScreen({super.key});
@@ -14,6 +15,12 @@ class UserMainScreen extends StatefulWidget {
 
 class _UserMainScreenState extends State<UserMainScreen> {
   int _currentIndex = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<PackageCubit>().loadPackages();
+  }
 
   @override
   Widget build(BuildContext context) {

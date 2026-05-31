@@ -113,6 +113,31 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
     );
   }
 
+  Future<void> _showCreatePackageDialog() async {
+    final result = await showDialog<_CreatePackageInput>(
+      context: context,
+      builder: (context) => const _CreatePackageDialog(),
+    );
+    if (result == null || !mounted) {
+      return;
+    }
+    await context.read<PackageCubit>().createPackage(
+      name: result.name,
+      senderName: result.senderName,
+      receiverName: result.receiverName,
+      receiverPhone: result.receiverPhone,
+      address: result.address,
+      rewardAmount: result.rewardAmount,
+    );
+    if (!mounted) {
+      return;
+    }
+    final message = context.read<PackageCubit>().state.message ?? '包裹信息已提交';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -129,6 +154,7 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
             _ServiceGrid(
+              onCreatePackageTap: _showCreatePackageDialog,
               onPickupCodeTap: _showPickupCodeSheet,
               onSearchTap: _showSearchPackageDialog,
               onStationTap: _openNearbyStations,
@@ -177,11 +203,13 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
 
 class _ServiceGrid extends StatelessWidget {
   const _ServiceGrid({
+    required this.onCreatePackageTap,
     required this.onPickupCodeTap,
     required this.onSearchTap,
     required this.onStationTap,
   });
 
+  final VoidCallback onCreatePackageTap;
   final VoidCallback onPickupCodeTap;
   final VoidCallback onSearchTap;
   final VoidCallback onStationTap;
@@ -201,9 +229,18 @@ class _ServiceGrid extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Wrap(
+        alignment: WrapAlignment.spaceAround,
+        runSpacing: 12,
+        spacing: 16,
         children: [
+          _ServiceItem(
+            icon: Icons.add_box_rounded,
+            label: '提交包裹',
+            color: const Color(0xFFFF8C00),
+            bgColor: const Color(0xFFFFF3E0),
+            onTap: onCreatePackageTap,
+          ),
           _ServiceItem(
             icon: Icons.qr_code_2_rounded,
             label: '我要取件',
@@ -390,6 +427,125 @@ class _PackageSearchDialog extends StatelessWidget {
           onPressed: () => Navigator.pop(context, controller.text),
           child: const Text('定位快递'),
         ),
+      ],
+    );
+  }
+}
+
+class _CreatePackageInput {
+  const _CreatePackageInput({
+    required this.name,
+    required this.senderName,
+    required this.receiverName,
+    required this.receiverPhone,
+    required this.address,
+    required this.rewardAmount,
+  });
+
+  final String name;
+  final String senderName;
+  final String receiverName;
+  final String receiverPhone;
+  final String address;
+  final double rewardAmount;
+}
+
+class _CreatePackageDialog extends StatefulWidget {
+  const _CreatePackageDialog();
+
+  @override
+  State<_CreatePackageDialog> createState() => _CreatePackageDialogState();
+}
+
+class _CreatePackageDialogState extends State<_CreatePackageDialog> {
+  final _nameController = TextEditingController();
+  final _senderController = TextEditingController();
+  final _receiverController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _rewardController = TextEditingController(text: '8');
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _senderController.dispose();
+    _receiverController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _rewardController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final reward = double.tryParse(_rewardController.text.trim()) ?? 8;
+    final input = _CreatePackageInput(
+      name: _nameController.text.trim(),
+      senderName: _senderController.text.trim(),
+      receiverName: _receiverController.text.trim(),
+      receiverPhone: _phoneController.text.trim(),
+      address: _addressController.text.trim(),
+      rewardAmount: reward,
+    );
+    if (input.name.isEmpty ||
+        input.receiverName.isEmpty ||
+        input.address.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请填写包裹名称、收件人和配送地址')));
+      return;
+    }
+    Navigator.pop(context, input);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('提交包裹信息'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: '包裹名称'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _senderController,
+              decoration: const InputDecoration(labelText: '寄件方/来源'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _receiverController,
+              decoration: const InputDecoration(labelText: '收件人'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: '联系电话'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _addressController,
+              maxLines: 2,
+              decoration: const InputDecoration(labelText: '配送地址'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _rewardController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '配送奖励'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('提交审批')),
       ],
     );
   }

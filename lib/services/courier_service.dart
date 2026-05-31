@@ -17,6 +17,18 @@ class CourierService {
     );
   }
 
+  Future<Result<Page<TaskVO>>> getMyTasks({
+    String status = 'ALL',
+    int page = 1,
+    int size = 50,
+  }) async {
+    return _apiClient.get<Page<TaskVO>>(
+      '/courier/tasks/mine',
+      queryParameters: {'status': status, 'page': page, 'size': size},
+      fromJsonT: (data) => Page.fromJson(data, (json) => TaskVO.fromJson(json)),
+    );
+  }
+
   // 2. 配送员抢单
   Future<Result<bool>> grabTask(String taskId) async {
     return _postTaskAction('/courier/tasks/$taskId/grab');
@@ -35,6 +47,16 @@ class CourierService {
     return _postTaskAction(
       '/courier/tasks/$taskId/deliver',
       data: deliverImage != null ? {'deliver_image': deliverImage} : null,
+    );
+  }
+
+  Future<Result<bool>> verifyPickupCode(
+    String taskId,
+    String pickupCode,
+  ) async {
+    return _postTaskAction(
+      '/courier/tasks/$taskId/verify-pickup-code',
+      data: {'pickup_code': pickupCode},
     );
   }
 

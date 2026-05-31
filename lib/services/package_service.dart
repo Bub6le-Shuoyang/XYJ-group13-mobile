@@ -33,6 +33,34 @@ class PackageService {
     );
   }
 
+  Future<Result<VillagePackage>> createPackage({
+    required String name,
+    required String senderName,
+    required String receiverName,
+    required String receiverPhone,
+    required String address,
+    required double rewardAmount,
+  }) async {
+    final result = await _apiClient.post<PackageVO>(
+      '/user/packages',
+      data: {
+        'name': name,
+        'sender_name': senderName,
+        'receiver_name': receiverName,
+        'receiver_phone': receiverPhone,
+        'address': address,
+        'reward_amount': rewardAmount,
+      },
+      fromJsonT: (data) => PackageVO.fromJson(data as Map<String, dynamic>),
+    );
+    return Result(
+      code: result.code,
+      message: result.message,
+      timestamp: result.timestamp,
+      data: result.data == null ? null : _fromPackageVO(result.data!),
+    );
+  }
+
   Future<Result<bool>> updatePackageStatus(
     String id,
     PackageStatus nextStatus, {

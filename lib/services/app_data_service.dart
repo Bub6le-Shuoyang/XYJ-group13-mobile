@@ -37,7 +37,7 @@ class AppDataService {
   Future<Result<List<StationVO>>> getNearbyStations() async {
     final result = await _apiClient.get<List<StationVO>>(
       '/stations/nearby',
-      queryParameters: {'lat': 30.51, 'lng': 114.31},
+      queryParameters: {'lat': 39.9499, 'lng': 116.3420},
       fromJsonT: (data) => (data as List)
           .map((json) => StationVO.fromJson(json as Map<String, dynamic>))
           .toList(),

@@ -136,6 +136,7 @@ class TaskVO {
   final String deliverAddress;
   final double rewardAmount;
   final String status;
+  final String pickupCodeMasked;
 
   TaskVO({
     required this.taskId,
@@ -145,17 +146,22 @@ class TaskVO {
     required this.deliverAddress,
     required this.rewardAmount,
     required this.status,
+    required this.pickupCodeMasked,
   });
 
   factory TaskVO.fromJson(Map<String, dynamic> json) {
     return TaskVO(
-      taskId: json['task_id'] as String,
-      packageId: json['package_id'] as String,
-      packageName: json['package_name'] as String,
-      pickupAddress: json['pickup_address'] as String,
-      deliverAddress: json['deliver_address'] as String,
-      rewardAmount: (json['reward_amount'] as num).toDouble(),
-      status: json['status'] as String,
+      taskId: _readString(json, ['task_id', 'taskId', 'id']),
+      packageId: _readString(json, ['package_id', 'packageId']),
+      packageName: _readString(json, ['package_name', 'packageName'], '普通包裹'),
+      pickupAddress: _readString(json, ['pickup_address', 'pickupAddress']),
+      deliverAddress: _readString(json, ['deliver_address', 'deliverAddress']),
+      rewardAmount: _readDouble(json, ['reward_amount', 'rewardAmount']),
+      status: _readString(json, ['status']),
+      pickupCodeMasked: _readString(json, [
+        'pickup_code_masked',
+        'pickupCodeMasked',
+      ]),
     );
   }
 }
@@ -173,9 +179,14 @@ class EarningsVO {
 
   factory EarningsVO.fromJson(Map<String, dynamic> json) {
     return EarningsVO(
-      totalEarnings: (json['total_earnings'] as num).toDouble(),
-      todayEarnings: (json['today_earnings'] as num).toDouble(),
-      completedOrders: json['completed_orders'] as int,
+      totalEarnings: _readDouble(json, ['total_earnings', 'totalEarnings']),
+      todayEarnings: _readDouble(json, ['today_earnings', 'todayEarnings']),
+      completedOrders: _readInt(json, [
+        'completed_orders',
+        'completedOrders',
+        'completed_tasks',
+        'completedTasks',
+      ]),
     );
   }
 }

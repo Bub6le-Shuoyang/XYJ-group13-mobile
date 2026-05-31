@@ -3,8 +3,8 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'package_state.freezed.dart';
 
 enum PackageStatus {
-  pendingInbound('待入库'),
-  inStock('已入库'),
+  pendingInbound('待审批'),
+  inStock('已审批'),
   taskPublished('待骑手接单'),
   assigned('派送中'),
   completed('已完成');

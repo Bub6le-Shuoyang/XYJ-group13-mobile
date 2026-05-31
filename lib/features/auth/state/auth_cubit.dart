@@ -4,9 +4,18 @@ import '../../../services/auth_service.dart';
 import 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
-  AuthCubit(this._authService) : super(const AuthState());
+  AuthCubit(this._authService) : super(const AuthState(isLoading: true));
 
   final AuthService _authService;
+
+  Future<void> restoreSession() async {
+    final session = await _authService.loadSavedSession();
+    if (session == null) {
+      emit(const AuthState(isLoading: false));
+      return;
+    }
+    emit(AuthState(isLoading: false, role: session.role, user: session.user));
+  }
 
   Future<void> login(AppRole role, String account, String password) async {
     if (account.trim().isEmpty || password.trim().isEmpty) {
@@ -74,7 +83,8 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  void logout() {
+  Future<void> logout() async {
+    await _authService.logout();
     emit(const AuthState());
   }
 }

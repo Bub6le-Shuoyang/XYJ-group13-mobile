@@ -83,10 +83,39 @@ class AppDataService {
     );
   }
 
-  Future<Result<Map<String, dynamic>>> redeemMallItem(String itemId) async {
-    return _apiClient.post<Map<String, dynamic>>(
+  Future<Result<Page<MallItemVO>>> getMallItems({
+    int page = 1,
+    int size = 50,
+  }) async {
+    return _apiClient.get<Page<MallItemVO>>(
+      '/user/mall/items',
+      queryParameters: {'page': page, 'size': size},
+      fromJsonT: (data) => Page.fromJson(
+        data as Map<String, dynamic>,
+        (json) => MallItemVO.fromJson(json as Map<String, dynamic>),
+      ),
+    );
+  }
+
+  Future<Result<Page<RedeemRecordVO>>> getRedeemRecords({
+    int page = 1,
+    int size = 20,
+  }) async {
+    return _apiClient.get<Page<RedeemRecordVO>>(
+      '/user/mall/redeem-records',
+      queryParameters: {'page': page, 'size': size},
+      fromJsonT: (data) => Page.fromJson(
+        data as Map<String, dynamic>,
+        (json) => RedeemRecordVO.fromJson(json as Map<String, dynamic>),
+      ),
+    );
+  }
+
+  Future<Result<RedeemRecordVO>> redeemMallItem(String itemId) async {
+    return _apiClient.post<RedeemRecordVO>(
       '/user/mall/items/$itemId/redeem',
-      fromJsonT: (data) => data as Map<String, dynamic>,
+      fromJsonT: (data) =>
+          RedeemRecordVO.fromJson(data as Map<String, dynamic>),
     );
   }
 

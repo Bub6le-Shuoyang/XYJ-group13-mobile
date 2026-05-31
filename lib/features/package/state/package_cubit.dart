@@ -25,16 +25,16 @@ class PackageCubit extends Cubit<PackageState> {
   }
 
   Future<void> createPackage({
-    required String name,
-    required String senderName,
+    required String orderNo,
+    required String stationId,
     required String receiverName,
     required String receiverPhone,
     required String address,
     required double rewardAmount,
   }) async {
     final result = await _packageService.createPackage(
-      name: name,
-      senderName: senderName,
+      orderNo: orderNo,
+      stationId: stationId,
       receiverName: receiverName,
       receiverPhone: receiverPhone,
       address: address,

@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => AuthCubit(AuthService())),
+        BlocProvider(create: (_) => AuthCubit(AuthService())..restoreSession()),
         BlocProvider(create: (_) => PackageCubit(PackageService())),
       ],
       child: MaterialApp(
@@ -93,6 +93,11 @@ class MyApp extends StatelessWidget {
         ),
         home: BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) {
+            if (state.isLoading) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
             if (state.role == null) {
               return const AuthScreen();
             } else if (state.role == AppRole.villager) {

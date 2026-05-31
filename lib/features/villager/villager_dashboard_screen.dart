@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/models/business_models.dart';
+import '../../services/app_data_service.dart';
 import '../package/state/package_cubit.dart';
 import '../package/state/package_state.dart';
 import '../package/widgets/package_card.dart';
@@ -122,8 +124,8 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
       return;
     }
     await context.read<PackageCubit>().createPackage(
-      name: result.name,
-      senderName: result.senderName,
+      orderNo: result.orderNo,
+      stationId: result.station.id,
       receiverName: result.receiverName,
       receiverPhone: result.receiverPhone,
       address: result.address,
@@ -434,16 +436,16 @@ class _PackageSearchDialog extends StatelessWidget {
 
 class _CreatePackageInput {
   const _CreatePackageInput({
-    required this.name,
-    required this.senderName,
+    required this.orderNo,
+    required this.station,
     required this.receiverName,
     required this.receiverPhone,
     required this.address,
     required this.rewardAmount,
   });
 
-  final String name;
-  final String senderName;
+  final String orderNo;
+  final StationVO station;
   final String receiverName;
   final String receiverPhone;
   final String address;
@@ -458,17 +460,26 @@ class _CreatePackageDialog extends StatefulWidget {
 }
 
 class _CreatePackageDialogState extends State<_CreatePackageDialog> {
-  final _nameController = TextEditingController();
-  final _senderController = TextEditingController();
+  final _orderNoController = TextEditingController();
   final _receiverController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
   final _rewardController = TextEditingController(text: '8');
+  final _appDataService = AppDataService();
+  List<StationVO> _stations = const [];
+  StationVO? _selectedStation;
+  bool _isLoadingStations = true;
+  String? _stationMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStations();
+  }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _senderController.dispose();
+    _orderNoController.dispose();
     _receiverController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
@@ -476,22 +487,42 @@ class _CreatePackageDialogState extends State<_CreatePackageDialog> {
     super.dispose();
   }
 
+  Future<void> _loadStations() async {
+    final result = await _appDataService.getNearbyStations();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      if (result.isSuccess && result.data != null && result.data!.isNotEmpty) {
+        _stations = result.data!;
+        _selectedStation = result.data!.first;
+        _stationMessage = null;
+      } else {
+        _stations = const [];
+        _selectedStation = null;
+        _stationMessage = result.message;
+      }
+      _isLoadingStations = false;
+    });
+  }
+
   void _submit() {
     final reward = double.tryParse(_rewardController.text.trim()) ?? 8;
+    final station = _selectedStation;
     final input = _CreatePackageInput(
-      name: _nameController.text.trim(),
-      senderName: _senderController.text.trim(),
+      orderNo: _orderNoController.text.trim(),
+      station: station!,
       receiverName: _receiverController.text.trim(),
       receiverPhone: _phoneController.text.trim(),
       address: _addressController.text.trim(),
       rewardAmount: reward,
     );
-    if (input.name.isEmpty ||
+    if (input.orderNo.isEmpty ||
         input.receiverName.isEmpty ||
         input.address.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('请填写包裹名称、收件人和配送地址')));
+      ).showSnackBar(const SnackBar(content: Text('请填写订单号、收件人和配送地址')));
       return;
     }
     Navigator.pop(context, input);
@@ -506,13 +537,22 @@ class _CreatePackageDialogState extends State<_CreatePackageDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: '包裹名称'),
+              controller: _orderNoController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(labelText: '订单号'),
             ),
             const SizedBox(height: 10),
-            TextField(
-              controller: _senderController,
-              decoration: const InputDecoration(labelText: '寄件方/来源'),
+            _StationSelector(
+              isLoading: _isLoadingStations,
+              message: _stationMessage,
+              stations: _stations,
+              selectedStation: _selectedStation,
+              onChanged: (station) {
+                setState(() {
+                  _selectedStation = station;
+                });
+              },
+              onRetry: _loadStations,
             ),
             const SizedBox(height: 10),
             TextField(
@@ -545,8 +585,60 @@ class _CreatePackageDialogState extends State<_CreatePackageDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('取消'),
         ),
-        FilledButton(onPressed: _submit, child: const Text('提交审批')),
+        FilledButton(
+          onPressed: _selectedStation == null ? null : _submit,
+          child: const Text('提交审批'),
+        ),
       ],
+    );
+  }
+}
+
+class _StationSelector extends StatelessWidget {
+  const _StationSelector({
+    required this.isLoading,
+    required this.message,
+    required this.stations,
+    required this.selectedStation,
+    required this.onChanged,
+    required this.onRetry,
+  });
+
+  final bool isLoading;
+  final String? message;
+  final List<StationVO> stations;
+  final StationVO? selectedStation;
+  final ValueChanged<StationVO?> onChanged;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const LinearProgressIndicator(minHeight: 2);
+    }
+    if (stations.isEmpty) {
+      return InputDecorator(
+        decoration: const InputDecoration(labelText: '寄件驿站'),
+        child: Row(
+          children: [
+            Expanded(child: Text(message ?? '暂无可用驿站')),
+            TextButton(onPressed: onRetry, child: const Text('重试')),
+          ],
+        ),
+      );
+    }
+    return DropdownButtonFormField<StationVO>(
+      initialValue: selectedStation,
+      decoration: const InputDecoration(labelText: '寄件驿站'),
+      items: stations
+          .map(
+            (station) => DropdownMenuItem<StationVO>(
+              value: station,
+              child: Text(station.name, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(),
+      onChanged: onChanged,
     );
   }
 }

@@ -45,6 +45,16 @@ String _readString(
   return fallback;
 }
 
+String? _readNullableString(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value != null && value.toString().isNotEmpty) {
+      return value.toString();
+    }
+  }
+  return null;
+}
+
 List<String> _readStringList(Map<String, dynamic> json, List<String> keys) {
   for (final key in keys) {
     final value = json[key];
@@ -337,6 +347,8 @@ class MallItemVO {
   final String desc;
   final int points;
   final MallItemType type;
+  final int stock;
+  final String? imageUrl;
 
   MallItemVO({
     required this.id,
@@ -344,6 +356,8 @@ class MallItemVO {
     required this.desc,
     required this.points,
     required this.type,
+    required this.stock,
+    this.imageUrl,
   });
 
   factory MallItemVO.fromJson(Map<String, dynamic> json) {
@@ -352,8 +366,36 @@ class MallItemVO {
       id: _readString(json, ['id', 'item_id', 'itemId']),
       name: _readString(json, ['name']),
       desc: _readString(json, ['desc', 'description']),
-      points: _readInt(json, ['points']),
+      points: _readInt(json, ['points', 'points_required', 'pointsRequired']),
       type: type == 'coupon' ? MallItemType.coupon : MallItemType.goods,
+      stock: _readInt(json, ['stock']),
+      imageUrl: _readNullableString(json, ['image_url', 'imageUrl']),
+    );
+  }
+}
+
+class RedeemRecordVO {
+  final String id;
+  final String itemName;
+  final int pointsCost;
+  final int remainPoints;
+  final String status;
+
+  RedeemRecordVO({
+    required this.id,
+    required this.itemName,
+    required this.pointsCost,
+    required this.remainPoints,
+    required this.status,
+  });
+
+  factory RedeemRecordVO.fromJson(Map<String, dynamic> json) {
+    return RedeemRecordVO(
+      id: _readString(json, ['id', 'record_id', 'recordId']),
+      itemName: _readString(json, ['item_name', 'itemName']),
+      pointsCost: _readInt(json, ['points_cost', 'pointsCost']),
+      remainPoints: _readInt(json, ['remain_points', 'remainPoints']),
+      status: _readString(json, ['status']),
     );
   }
 }

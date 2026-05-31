@@ -34,8 +34,8 @@ class PackageService {
   }
 
   Future<Result<VillagePackage>> createPackage({
-    required String name,
-    required String senderName,
+    required String orderNo,
+    required String stationId,
     required String receiverName,
     required String receiverPhone,
     required String address,
@@ -44,8 +44,8 @@ class PackageService {
     final result = await _apiClient.post<PackageVO>(
       '/user/packages',
       data: {
-        'name': name,
-        'sender_name': senderName,
+        'order_no': orderNo,
+        'station_id': stationId,
         'receiver_name': receiverName,
         'receiver_phone': receiverPhone,
         'address': address,

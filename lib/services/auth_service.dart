@@ -92,12 +92,55 @@ class AuthService {
     };
   }
 
+  Future<SavedLoginSession?> loadSavedSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final roleText = prefs.getString('user_role');
+    if (token == null || token.isEmpty || roleText == null) {
+      return null;
+    }
+    final role = _roleFromParam(roleText);
+    if (role == null) {
+      return null;
+    }
+    return SavedLoginSession(
+      role: role,
+      user: UserVO(
+        id: prefs.getInt('user_id') ?? 0,
+        email: prefs.getString('user_email') ?? '',
+        phone: prefs.getString('user_phone'),
+        nickname: prefs.getString('user_nickname'),
+        avatarUrl: prefs.getString('user_avatar_url'),
+        role: roleText,
+      ),
+    );
+  }
+
+  AppRole? _roleFromParam(String role) {
+    return switch (role.toUpperCase()) {
+      'USER' => AppRole.villager,
+      'COURIER' => AppRole.courier,
+      'ADMIN' => AppRole.admin,
+      _ => null,
+    };
+  }
+
   Future<void> _saveLoginSession(LoginResponseVO data) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', data.token);
     await prefs.setString('refresh_token', data.refreshToken);
+    await prefs.setInt('user_id', data.user.id);
     await prefs.setString('user_email', data.user.email);
     await prefs.setString('user_role', data.user.role);
+    if (data.user.phone != null) {
+      await prefs.setString('user_phone', data.user.phone!);
+    }
+    if (data.user.nickname != null) {
+      await prefs.setString('user_nickname', data.user.nickname!);
+    }
+    if (data.user.avatarUrl != null) {
+      await prefs.setString('user_avatar_url', data.user.avatarUrl!);
+    }
   }
 
   // 4. 退出登录
@@ -105,7 +148,18 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('refresh_token');
+    await prefs.remove('user_id');
     await prefs.remove('user_email');
     await prefs.remove('user_role');
+    await prefs.remove('user_phone');
+    await prefs.remove('user_nickname');
+    await prefs.remove('user_avatar_url');
   }
+}
+
+class SavedLoginSession {
+  const SavedLoginSession({required this.role, required this.user});
+
+  final AppRole role;
+  final UserVO user;
 }

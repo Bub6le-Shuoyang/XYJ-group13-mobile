@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/models/business_models.dart';
@@ -130,34 +131,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => _PointsMallScreen(
-          points: _points,
-          items: _mallItems,
-          onRedeem: (item) async {
-            if (_points < item.points) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('积分不足，暂时无法兑换')));
-              return false;
-            }
-
-            final result = await _appDataService.redeemMallItem(item.id);
+          initialPoints: _points,
+          initialItems: _mallItems,
+          onPointsChanged: (points) {
             if (!mounted) {
-              return false;
+              return;
             }
-            if (!result.isSuccess || result.data == null) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(result.message)));
-              return false;
-            }
-            setState(() {
-              _points -= item.points;
-              _redeemedItems.insert(0, item.name);
-              if (item.type == _MallItemType.coupon) {
-                _couponCount++;
-              }
-            });
-            return true;
+            setState(() => _points = points);
           },
         ),
       ),
@@ -1304,6 +1284,8 @@ class _MallItem {
     required this.name,
     required this.desc,
     required this.points,
+    required this.stock,
+    required this.imageUrl,
     required this.icon,
     required this.color,
     required this.type,
@@ -1316,6 +1298,8 @@ class _MallItem {
       name: vo.name,
       desc: vo.desc,
       points: vo.points,
+      stock: vo.stock,
+      imageUrl: vo.imageUrl,
       icon: isCoupon ? Icons.card_giftcard_rounded : Icons.inventory_2_rounded,
       color: isCoupon ? const Color(0xFFE53935) : const Color(0xFF1677FF),
       type: isCoupon ? _MallItemType.coupon : _MallItemType.goods,
@@ -1326,39 +1310,116 @@ class _MallItem {
   final String name;
   final String desc;
   final int points;
+  final int stock;
+  final String? imageUrl;
   final IconData icon;
   final Color color;
   final _MallItemType type;
+
+  _MallItem copyWith({int? stock}) {
+    return _MallItem(
+      id: id,
+      name: name,
+      desc: desc,
+      points: points,
+      stock: stock ?? this.stock,
+      imageUrl: imageUrl,
+      icon: icon,
+      color: color,
+      type: type,
+    );
+  }
 }
 
 class _PointsMallScreen extends StatefulWidget {
   const _PointsMallScreen({
-    required this.points,
-    required this.items,
-    required this.onRedeem,
+    required this.initialPoints,
+    required this.initialItems,
+    required this.onPointsChanged,
   });
 
-  final int points;
-  final List<_MallItem> items;
-  final Future<bool> Function(_MallItem item) onRedeem;
+  final int initialPoints;
+  final List<_MallItem> initialItems;
+  final ValueChanged<int> onPointsChanged;
 
   @override
   State<_PointsMallScreen> createState() => _PointsMallScreenState();
 }
 
 class _PointsMallScreenState extends State<_PointsMallScreen> {
-  late int _points = widget.points;
+  final _appDataService = AppDataService();
+  late int _points = widget.initialPoints;
+  late List<_MallItem> _items = widget.initialItems;
+  List<RedeemRecordVO> _records = const [];
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  Future<void> _redeem(_MallItem item) async {
-    final success = await widget.onRedeem(item);
-    if (!success) {
-      return;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _loadMallData();
+  }
 
+  Future<void> _loadMallData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    final itemsResult = await _appDataService.getMallItems();
+    final recordsResult = await _appDataService.getRedeemRecords();
     if (!mounted) {
       return;
     }
-    setState(() => _points -= item.points);
+    setState(() {
+      if (itemsResult.isSuccess && itemsResult.data != null) {
+        _items = itemsResult.data!.records.map(_MallItem.fromVO).toList();
+      } else {
+        _errorMessage = itemsResult.message;
+      }
+      if (recordsResult.isSuccess && recordsResult.data != null) {
+        _records = recordsResult.data!.records;
+      }
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _redeem(_MallItem item) async {
+    if (_points < item.points) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('积分不足，暂时无法兑换')));
+      return;
+    }
+    if (item.stock <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('库存不足，暂时无法兑换')));
+      return;
+    }
+
+    final result = await _appDataService.redeemMallItem(item.id);
+    if (!mounted) {
+      return;
+    }
+    if (!result.isSuccess || result.data == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.message)));
+      return;
+    }
+    final record = result.data!;
+    setState(() {
+      _points = record.remainPoints;
+      _records = [record, ..._records];
+      _items = _items
+          .map(
+            (mallItem) => mallItem.id == item.id
+                ? mallItem.copyWith(stock: mallItem.stock - 1)
+                : mallItem,
+          )
+          .toList();
+    });
+    widget.onPointsChanged(_points);
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('已成功兑换「${item.name}」')));
@@ -1368,48 +1429,85 @@ class _PointsMallScreenState extends State<_PointsMallScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('积分商城')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF8C00), Color(0xFFFFB74D)],
+      body: RefreshIndicator(
+        onRefresh: _loadMallData,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF8C00), Color(0xFFFFB74D)],
+                ),
+                borderRadius: BorderRadius.circular(22),
               ),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.stars_rounded, color: Colors.white, size: 36),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('可用积分', style: TextStyle(color: Colors.white70)),
-                    Text(
-                      '$_points',
-                      style: const TextStyle(
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.stars_rounded,
+                    color: Colors.white,
+                    size: 36,
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '可用积分',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      Text(
+                        '$_points',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  if (_isLoading)
+                    const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
                         color: Colors.white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            '可兑换权益',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 12),
-          ...widget.items.map(
-            (item) => _MallItemCard(item: item, onRedeem: _redeem),
-          ),
-        ],
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              _MallNotice(message: _errorMessage!, onRetry: _loadMallData),
+            ],
+            const SizedBox(height: 18),
+            const Text(
+              '可兑换权益',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            if (_items.isEmpty && !_isLoading)
+              const _MallEmptyView(message: '暂无可兑换权益')
+            else
+              ..._items.map(
+                (item) => _MallItemCard(item: item, onRedeem: _redeem),
+              ),
+            const SizedBox(height: 18),
+            const Text(
+              '最近兑换',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            if (_records.isEmpty)
+              const _MallEmptyView(message: '暂无兑换记录')
+            else
+              ..._records.take(5).map((record) => _RedeemRecordTile(record)),
+          ],
+        ),
       ),
     );
   }
@@ -1421,8 +1519,22 @@ class _MallItemCard extends StatelessWidget {
   final _MallItem item;
   final ValueChanged<_MallItem> onRedeem;
 
+  String _resolveImageUrl(String imageUrl) {
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    final origin = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+        ? 'http://10.0.2.2:7022'
+        : 'http://localhost:7022';
+    final resolvedUrl = imageUrl.startsWith('/')
+        ? '$origin$imageUrl'
+        : '$origin/$imageUrl';
+    return Uri.encodeFull(resolvedUrl);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final imageUrl = item.imageUrl;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1439,7 +1551,17 @@ class _MallItemCard extends StatelessWidget {
               color: item.color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(item.icon, color: item.color, size: 28),
+            child: imageUrl == null
+                ? Icon(item.icon, color: item.color, size: 28)
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      _resolveImageUrl(imageUrl),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          Icon(item.icon, color: item.color, size: 28),
+                    ),
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1475,19 +1597,102 @@ class _MallItemCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '库存 ${item.stock}',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    ),
                     const Spacer(),
                     FilledButton(
                       key: ValueKey('redeem_${item.name}_button'),
-                      onPressed: () => onRedeem(item),
+                      onPressed: item.stock <= 0 ? null : () => onRedeem(item),
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(82, 38),
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                       ),
-                      child: const Text('兑换'),
+                      child: Text(item.stock <= 0 ? '已兑完' : '兑换'),
                     ),
                   ],
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MallNotice extends StatelessWidget {
+  const _MallNotice({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, color: Color(0xFFFF8C00), size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(message, style: const TextStyle(fontSize: 12))),
+          TextButton(onPressed: onRetry, child: const Text('重试')),
+        ],
+      ),
+    );
+  }
+}
+
+class _MallEmptyView extends StatelessWidget {
+  const _MallEmptyView({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      alignment: Alignment.center,
+      child: Text(message, style: TextStyle(color: Colors.grey[500])),
+    );
+  }
+}
+
+class _RedeemRecordTile extends StatelessWidget {
+  const _RedeemRecordTile(this.record);
+
+  final RedeemRecordVO record;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.receipt_long_rounded, color: Color(0xFFFF8C00)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              record.itemName,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          Text(
+            '-${record.pointsCost} 积分',
+            style: const TextStyle(
+              color: Color(0xFFE53935),
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],

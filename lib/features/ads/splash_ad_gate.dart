@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/models/business_models.dart';
 import '../../services/app_data_service.dart';
 
@@ -146,9 +147,7 @@ class _SplashAdDialogState extends State<_SplashAdDialog> {
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       return Uri.encodeFull(imageUrl);
     }
-    final origin = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-        ? 'http://10.0.2.2:7022'
-        : 'http://localhost:7022';
+    final origin = AppConfig.resourceBaseUrl;
     final resolvedUrl = imageUrl.startsWith('/')
         ? '$origin$imageUrl'
         : '$origin/$imageUrl';

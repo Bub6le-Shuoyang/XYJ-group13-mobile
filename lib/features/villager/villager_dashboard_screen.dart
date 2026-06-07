@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+
 import '../../core/models/business_models.dart';
 import '../../services/app_data_service.dart';
 import '../package/state/package_cubit.dart';
@@ -819,12 +821,34 @@ class _PickupCodeCard extends StatelessWidget {
             ),
             child: Column(
               children: [
-                const Icon(
-                  Icons.qr_code_2_rounded,
-                  size: 46,
-                  color: Color(0xFF4CAF50),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE8F5E9)),
+                  ),
+                  child: QrImageView(
+                    data: package.pickupCode,
+                    version: QrVersions.auto,
+                    size: 132,
+                    gapless: false,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Color(0xFF1B5E20),
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Color(0xFF1B5E20),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
+                Text(
+                  '扫码或输入取件码',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+                const SizedBox(height: 4),
                 Text(
                   package.pickupCode,
                   style: const TextStyle(

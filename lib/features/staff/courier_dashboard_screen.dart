@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+
 import '../../core/models/business_models.dart';
 import '../../services/courier_service.dart';
 import '../package/state/package_state.dart';
@@ -336,6 +338,31 @@ class _CourierPickupCodeDialog extends StatelessWidget {
             ),
             onSubmitted: (value) => Navigator.pop(context, value),
           ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              key: const ValueKey('courier_scan_pickup_code_button'),
+              onPressed: () async {
+                final scannedCode = await showModalBottomSheet<String>(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (context) => const _PickupCodeScannerSheet(),
+                );
+                if (scannedCode == null || scannedCode.trim().isEmpty) {
+                  return;
+                }
+                controller.text = scannedCode.trim().toUpperCase();
+                if (!context.mounted) {
+                  return;
+                }
+                Navigator.pop(context, controller.text);
+              },
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              label: const Text('扫码取件码'),
+            ),
+          ),
         ],
       ),
       actions: [
@@ -349,6 +376,132 @@ class _CourierPickupCodeDialog extends StatelessWidget {
           child: const Text('验证并签收'),
         ),
       ],
+    );
+  }
+}
+
+class _PickupCodeScannerSheet extends StatefulWidget {
+  const _PickupCodeScannerSheet();
+
+  @override
+  State<_PickupCodeScannerSheet> createState() =>
+      _PickupCodeScannerSheetState();
+}
+
+class _PickupCodeScannerSheetState extends State<_PickupCodeScannerSheet> {
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
+  bool _hasScanned = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleDetect(BarcodeCapture capture) {
+    if (_hasScanned) {
+      return;
+    }
+    final rawValue = capture.barcodes
+        .map((barcode) => barcode.rawValue)
+        .whereType<String>()
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .firstOrNull;
+    if (rawValue == null) {
+      return;
+    }
+
+    _hasScanned = true;
+    Navigator.pop(context, rawValue);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.72,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '扫码取件码',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '对准用户「我要取件」中的二维码',
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  MobileScanner(
+                    controller: _controller,
+                    onDetect: _handleDetect,
+                  ),
+                  Center(
+                    child: Container(
+                      width: 220,
+                      height: 220,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white, width: 3),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: 28,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Text(
+                        '识别成功后会自动验证签收，也可以返回手动输入取件码。',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

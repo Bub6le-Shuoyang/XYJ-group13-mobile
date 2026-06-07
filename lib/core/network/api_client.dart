@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/result.dart';
@@ -44,10 +43,7 @@ class ApiClient {
 
   String _defaultBaseUrl() {
     // Flutter 端通过 Spring Boot 读取 MySQL，不能直接连接数据库 3306 端口。
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:7022/api/v1';
-    }
-    return 'http://localhost:7022/api/v1';
+    return 'http://47.95.236.177:7022/api/v1';
   }
 
   Future<Result<T>> get<T>(

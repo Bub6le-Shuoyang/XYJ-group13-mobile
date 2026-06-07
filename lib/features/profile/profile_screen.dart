@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/models/business_models.dart';
@@ -1523,9 +1522,7 @@ class _MallItemCard extends StatelessWidget {
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       return imageUrl;
     }
-    final origin = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-        ? 'http://10.0.2.2:7022'
-        : 'http://localhost:7022';
+    const origin = 'http://47.95.236.177:7022';
     final resolvedUrl = imageUrl.startsWith('/')
         ? '$origin$imageUrl'
         : '$origin/$imageUrl';

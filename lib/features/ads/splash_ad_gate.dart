@@ -146,9 +146,7 @@ class _SplashAdDialogState extends State<_SplashAdDialog> {
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       return Uri.encodeFull(imageUrl);
     }
-    final origin = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-        ? 'http://10.0.2.2:7022'
-        : 'http://localhost:7022';
+    const origin = 'http://47.95.236.177:7022';
     final resolvedUrl = imageUrl.startsWith('/')
         ? '$origin$imageUrl'
         : '$origin/$imageUrl';

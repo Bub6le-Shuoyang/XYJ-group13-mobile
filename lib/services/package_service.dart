@@ -40,6 +40,8 @@ class PackageService {
     required String receiverPhone,
     required String address,
     required double rewardAmount,
+    required double lat,
+    required double lng,
   }) async {
     final result = await _apiClient.post<PackageVO>(
       '/user/packages',
@@ -50,6 +52,8 @@ class PackageService {
         'receiver_phone': receiverPhone,
         'address': address,
         'reward_amount': rewardAmount,
+        'lat': lat,
+        'lng': lng,
       },
       fromJsonT: (data) => PackageVO.fromJson(data as Map<String, dynamic>),
     );

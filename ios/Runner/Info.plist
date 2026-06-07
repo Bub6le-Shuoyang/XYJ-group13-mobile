@@ -30,6 +30,8 @@
         <string>用于选择图片作为个人头像</string>
         <key>NSPhotoLibraryAddUsageDescription</key>
         <string>用于保存和选择个人头像图片</string>
+        <key>NSLocationWhenInUseUsageDescription</key>
+        <string>用于定位附近驿站并解析配送地址位置</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

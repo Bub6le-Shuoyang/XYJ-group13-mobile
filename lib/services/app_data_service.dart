@@ -4,9 +4,14 @@ import '../core/models/business_models.dart';
 import '../core/models/result.dart';
 import '../core/network/api_client.dart';
 import '../features/package/state/package_state.dart';
+import 'location_service.dart';
+
+const double _defaultNearbyLat = 39.9499;
+const double _defaultNearbyLng = 116.3420;
 
 class AppDataService {
   final ApiClient _apiClient = ApiClient();
+  final LocationService _locationService = const LocationService();
 
   Future<Result<List<NewsPostVO>>> getNewsPosts() async {
     final result = await _apiClient.get<Page<NewsPostVO>>(
@@ -36,10 +41,18 @@ class AppDataService {
     );
   }
 
-  Future<Result<List<StationVO>>> getNearbyStations() async {
+  Future<Result<List<StationVO>>> getNearbyStations({
+    double? lat,
+    double? lng,
+  }) async {
+    final currentLocation = (lat != null && lng != null)
+        ? LocationPoint(lat: lat, lng: lng)
+        : await _locationService.getCurrentLocation();
+    final resolvedLat = currentLocation?.lat ?? _defaultNearbyLat;
+    final resolvedLng = currentLocation?.lng ?? _defaultNearbyLng;
     final result = await _apiClient.get<List<StationVO>>(
       '/stations/nearby',
-      queryParameters: {'lat': 39.9499, 'lng': 116.3420},
+      queryParameters: {'lat': resolvedLat, 'lng': resolvedLng},
       fromJsonT: (data) => (data as List)
           .map((json) => StationVO.fromJson(json as Map<String, dynamic>))
           .toList(),

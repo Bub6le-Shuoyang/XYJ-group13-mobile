@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/models/app_role.dart';
 import 'widgets/register_view.dart';
 import 'widgets/user_login_view.dart';
 import 'widgets/staff_login_view.dart';
@@ -13,6 +14,10 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   bool _showStaffLogin = false;
   bool _showRegister = false;
+  String _userAccountDraft = '';
+  String _staffAdminAccountDraft = '';
+  String _staffCourierAccountDraft = '';
+  AppRole _staffSelectedRole = AppRole.admin;
 
   @override
   Widget build(BuildContext context) {
@@ -123,10 +128,20 @@ class _AuthScreenState extends State<AuthScreen> {
       );
     }
     if (_showStaffLogin) {
-      return const StaffLoginView(key: ValueKey('staff_login'));
+      return StaffLoginView(
+        key: const ValueKey('staff_login'),
+        initialRole: _staffSelectedRole,
+        initialAdminAccount: _staffAdminAccountDraft,
+        initialCourierAccount: _staffCourierAccountDraft,
+        onRoleChanged: (role) => _staffSelectedRole = role,
+        onAdminAccountChanged: (value) => _staffAdminAccountDraft = value,
+        onCourierAccountChanged: (value) => _staffCourierAccountDraft = value,
+      );
     }
     return UserLoginView(
       key: const ValueKey('user_login'),
+      initialAccount: _userAccountDraft,
+      onAccountChanged: (value) => _userAccountDraft = value,
       onRegisterTap: () => setState(() {
         _showRegister = true;
         _showStaffLogin = false;

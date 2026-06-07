@@ -5,17 +5,31 @@ import '../state/auth_cubit.dart';
 import '../state/auth_state.dart';
 
 class UserLoginView extends StatefulWidget {
-  const UserLoginView({super.key, required this.onRegisterTap});
+  const UserLoginView({
+    super.key,
+    required this.onRegisterTap,
+    required this.initialAccount,
+    required this.onAccountChanged,
+  });
 
   final VoidCallback onRegisterTap;
+  final String initialAccount;
+  final ValueChanged<String> onAccountChanged;
 
   @override
   State<UserLoginView> createState() => _UserLoginViewState();
 }
 
 class _UserLoginViewState extends State<UserLoginView> {
-  final _accountController = TextEditingController(text: 'user01@example.com');
-  final _passwordController = TextEditingController(text: 'MyPass123!');
+  late final TextEditingController _accountController;
+  late final TextEditingController _passwordController;
+
+  @override
+  void initState() {
+    super.initState();
+    _accountController = TextEditingController(text: widget.initialAccount);
+    _passwordController = TextEditingController();
+  }
 
   @override
   void dispose() {
@@ -98,6 +112,7 @@ class _UserLoginViewState extends State<UserLoginView> {
               TextField(
                 key: ValueKey('user_email_field'),
                 controller: _accountController,
+                onChanged: widget.onAccountChanged,
                 decoration: InputDecoration(
                   hintText: '请输入手机号 / 邮箱',
                   prefixIcon: Icon(Icons.phone_iphone_rounded, size: 20),

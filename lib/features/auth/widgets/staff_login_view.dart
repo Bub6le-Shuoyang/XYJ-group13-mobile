@@ -5,16 +5,43 @@ import '../state/auth_cubit.dart';
 import '../state/auth_state.dart';
 
 class StaffLoginView extends StatefulWidget {
-  const StaffLoginView({super.key});
+  const StaffLoginView({
+    super.key,
+    required this.initialRole,
+    required this.initialAdminAccount,
+    required this.initialCourierAccount,
+    required this.onRoleChanged,
+    required this.onAdminAccountChanged,
+    required this.onCourierAccountChanged,
+  });
+
+  final AppRole initialRole;
+  final String initialAdminAccount;
+  final String initialCourierAccount;
+  final ValueChanged<AppRole> onRoleChanged;
+  final ValueChanged<String> onAdminAccountChanged;
+  final ValueChanged<String> onCourierAccountChanged;
 
   @override
   State<StaffLoginView> createState() => _StaffLoginViewState();
 }
 
 class _StaffLoginViewState extends State<StaffLoginView> {
-  final _accountController = TextEditingController(text: 'admin@example.com');
-  final _passwordController = TextEditingController(text: 'MyPass123!');
-  AppRole _selectedRole = AppRole.admin;
+  late final TextEditingController _accountController;
+  late final TextEditingController _passwordController;
+  late AppRole _selectedRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRole = widget.initialRole;
+    _accountController = TextEditingController(
+      text: _selectedRole == AppRole.admin
+          ? widget.initialAdminAccount
+          : widget.initialCourierAccount,
+    );
+    _passwordController = TextEditingController();
+  }
 
   @override
   void dispose() {
@@ -27,10 +54,18 @@ class _StaffLoginViewState extends State<StaffLoginView> {
     setState(() {
       _selectedRole = role;
       _accountController.text = role == AppRole.admin
-          ? 'admin@example.com'
-          : 'courier01';
-      _passwordController.text = 'MyPass123!';
+          ? widget.initialAdminAccount
+          : widget.initialCourierAccount;
+      widget.onRoleChanged(role);
     });
+  }
+
+  void _handleAccountChanged(String value) {
+    if (_selectedRole == AppRole.admin) {
+      widget.onAdminAccountChanged(value);
+      return;
+    }
+    widget.onCourierAccountChanged(value);
   }
 
   Future<void> _handleStaffLogin(BuildContext context) async {
@@ -143,6 +178,7 @@ class _StaffLoginViewState extends State<StaffLoginView> {
               TextField(
                 key: const ValueKey('staff_account_field'),
                 controller: _accountController,
+                onChanged: _handleAccountChanged,
                 decoration: InputDecoration(
                   hintText: '请输入${_selectedRole.title}账号',
                   prefixIcon: const Icon(Icons.badge_outlined, size: 20),

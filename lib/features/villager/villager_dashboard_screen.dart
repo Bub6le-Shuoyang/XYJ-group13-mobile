@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/models/business_models.dart';
 import '../../services/app_data_service.dart';
+import '../../services/location_service.dart';
 import '../package/state/package_cubit.dart';
 import '../package/state/package_state.dart';
 import '../package/widgets/package_card.dart';
@@ -132,6 +133,8 @@ class _VillagerDashboardScreenState extends State<VillagerDashboardScreen> {
       receiverPhone: result.receiverPhone,
       address: result.address,
       rewardAmount: result.rewardAmount,
+      lat: result.lat,
+      lng: result.lng,
     );
     if (!mounted) {
       return;
@@ -444,6 +447,8 @@ class _CreatePackageInput {
     required this.receiverPhone,
     required this.address,
     required this.rewardAmount,
+    required this.lat,
+    required this.lng,
   });
 
   final String orderNo;
@@ -452,6 +457,8 @@ class _CreatePackageInput {
   final String receiverPhone;
   final String address;
   final double rewardAmount;
+  final double lat;
+  final double lng;
 }
 
 class _CreatePackageDialog extends StatefulWidget {
@@ -468,9 +475,11 @@ class _CreatePackageDialogState extends State<_CreatePackageDialog> {
   final _addressController = TextEditingController();
   final _rewardController = TextEditingController(text: '8');
   final _appDataService = AppDataService();
+  final _locationService = const LocationService();
   List<StationVO> _stations = const [];
   StationVO? _selectedStation;
   bool _isLoadingStations = true;
+  bool _isSubmitting = false;
   String? _stationMessage;
 
   @override
@@ -508,16 +517,19 @@ class _CreatePackageDialogState extends State<_CreatePackageDialog> {
     });
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final reward = double.tryParse(_rewardController.text.trim()) ?? 8;
     final station = _selectedStation;
+    final address = _addressController.text.trim();
     final input = _CreatePackageInput(
       orderNo: _orderNoController.text.trim(),
       station: station!,
       receiverName: _receiverController.text.trim(),
       receiverPhone: _phoneController.text.trim(),
-      address: _addressController.text.trim(),
+      address: address,
       rewardAmount: reward,
+      lat: station.lat,
+      lng: station.lng,
     );
     if (input.orderNo.isEmpty ||
         input.receiverName.isEmpty ||
@@ -527,7 +539,34 @@ class _CreatePackageDialogState extends State<_CreatePackageDialog> {
       ).showSnackBar(const SnackBar(content: Text('请填写订单号、收件人和配送地址')));
       return;
     }
-    Navigator.pop(context, input);
+    setState(() {
+      _isSubmitting = true;
+    });
+    final resolvedLocation = await _locationService.geocodeAddress(address);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isSubmitting = false;
+    });
+    if (resolvedLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('未解析到精确地址，已使用寄件驿站位置')),
+      );
+    }
+    Navigator.pop(
+      context,
+      _CreatePackageInput(
+        orderNo: input.orderNo,
+        station: input.station,
+        receiverName: input.receiverName,
+        receiverPhone: input.receiverPhone,
+        address: input.address,
+        rewardAmount: input.rewardAmount,
+        lat: resolvedLocation?.lat ?? input.lat,
+        lng: resolvedLocation?.lng ?? input.lng,
+      ),
+    );
   }
 
   @override
@@ -588,8 +627,14 @@ class _CreatePackageDialogState extends State<_CreatePackageDialog> {
           child: const Text('取消'),
         ),
         FilledButton(
-          onPressed: _selectedStation == null ? null : _submit,
-          child: const Text('提交审批'),
+          onPressed: _selectedStation == null || _isSubmitting ? null : _submit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('提交审批'),
         ),
       ],
     );

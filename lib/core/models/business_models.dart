@@ -1,3 +1,6 @@
+const double _defaultMapLat = 39.9499;
+const double _defaultMapLng = 116.3420;
+
 double _readDouble(
   Map<String, dynamic> json,
   List<String> keys, [
@@ -142,8 +145,8 @@ class PackageVO {
       timeline: _readStringList(json, ['timeline', 'traces', 'logs']),
       courierName:
           json['courier_name'] as String? ?? json['courierName'] as String?,
-      lat: _readDouble(json, ['lat', 'latitude'], 30.51),
-      lng: _readDouble(json, ['lng', 'longitude'], 114.31),
+      lat: _readDouble(json, ['lat', 'latitude'], _defaultMapLat),
+      lng: _readDouble(json, ['lng', 'longitude'], _defaultMapLng),
     );
   }
 }
@@ -272,8 +275,8 @@ class StationVO {
       name: _readString(json, ['name', 'station_name', 'stationName']),
       address: _readString(json, ['address']),
       distance: _readString(json, ['distance'], '0.0km'),
-      lat: _readDouble(json, ['lat', 'latitude'], 30.51),
-      lng: _readDouble(json, ['lng', 'longitude'], 114.31),
+      lat: _readDouble(json, ['lat', 'latitude'], _defaultMapLat),
+      lng: _readDouble(json, ['lng', 'longitude'], _defaultMapLng),
     );
   }
 }

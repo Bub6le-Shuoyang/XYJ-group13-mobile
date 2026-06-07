@@ -31,6 +31,8 @@ class PackageCubit extends Cubit<PackageState> {
     required String receiverPhone,
     required String address,
     required double rewardAmount,
+    required double lat,
+    required double lng,
   }) async {
     final result = await _packageService.createPackage(
       orderNo: orderNo,
@@ -39,6 +41,8 @@ class PackageCubit extends Cubit<PackageState> {
       receiverPhone: receiverPhone,
       address: address,
       rewardAmount: rewardAmount,
+      lat: lat,
+      lng: lng,
     );
     if (!result.isSuccess || result.data == null) {
       emit(state.copyWith(message: result.message));

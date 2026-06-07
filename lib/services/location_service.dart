@@ -27,11 +27,19 @@ class LocationService {
         return null;
       }
 
+      final lastKnownPosition = await Geolocator.getLastKnownPosition();
+      if (lastKnownPosition != null) {
+        return LocationPoint(
+          lat: lastKnownPosition.latitude,
+          lng: lastKnownPosition.longitude,
+        );
+      }
+
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.medium,
         ),
-      );
+      ).timeout(const Duration(seconds: 5));
       return LocationPoint(lat: position.latitude, lng: position.longitude);
     } catch (_) {
       return null;

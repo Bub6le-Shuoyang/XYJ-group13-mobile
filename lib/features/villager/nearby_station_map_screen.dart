@@ -24,14 +24,24 @@ class _NearbyStationMapScreenState extends State<NearbyStationMapScreen> {
   }
 
   Future<void> _loadStations() async {
-    final result = await _appDataService.getNearbyStations();
-    if (!mounted) {
-      return;
+    try {
+      final result = await _appDataService.getNearbyStations();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _stations = result.data ?? const [];
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _stations = const [];
+        _isLoading = false;
+      });
     }
-    setState(() {
-      _stations = result.data ?? const [];
-      _isLoading = false;
-    });
   }
 
   @override

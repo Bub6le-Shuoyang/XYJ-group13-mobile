@@ -499,22 +499,34 @@ class _CreatePackageDialogState extends State<_CreatePackageDialog> {
   }
 
   Future<void> _loadStations() async {
-    final result = await _appDataService.getNearbyStations();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      if (result.isSuccess && result.data != null && result.data!.isNotEmpty) {
-        _stations = result.data!;
-        _selectedStation = result.data!.first;
-        _stationMessage = null;
-      } else {
+    try {
+      final result = await _appDataService.getNearbyStations();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        if (result.isSuccess && result.data != null && result.data!.isNotEmpty) {
+          _stations = result.data!;
+          _selectedStation = result.data!.first;
+          _stationMessage = null;
+        } else {
+          _stations = const [];
+          _selectedStation = null;
+          _stationMessage = result.message;
+        }
+        _isLoadingStations = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
         _stations = const [];
         _selectedStation = null;
-        _stationMessage = result.message;
-      }
-      _isLoadingStations = false;
-    });
+        _stationMessage = '驿站加载失败，请重试';
+        _isLoadingStations = false;
+      });
+    }
   }
 
   Future<void> _submit() async {

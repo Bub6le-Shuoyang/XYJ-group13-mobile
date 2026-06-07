@@ -31,6 +31,16 @@ int _readInt(Map<String, dynamic> json, List<String> keys, [int fallback = 0]) {
   return fallback;
 }
 
+class UploadVO {
+  final String url;
+
+  const UploadVO({required this.url});
+
+  factory UploadVO.fromJson(Map<String, dynamic> json) {
+    return UploadVO(url: _readString(json, ['url']));
+  }
+}
+
 String _readString(
   Map<String, dynamic> json,
   List<String> keys, [

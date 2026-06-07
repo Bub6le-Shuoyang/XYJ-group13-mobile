@@ -84,6 +84,44 @@ class ApiClient {
     }
   }
 
+  Future<Result<T>> put<T>(
+    String path, {
+    dynamic data,
+    T Function(dynamic)? fromJsonT,
+  }) async {
+    try {
+      final response = await _dio.put(path, data: data);
+      return Result.fromJson(response.data, fromJsonT);
+    } on DioException catch (e) {
+      return _handleDioException(e, fromJsonT);
+    } catch (e) {
+      return Result(
+        code: -1,
+        message: e.toString(),
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+  }
+
+  Future<Result<T>> postForm<T>(
+    String path, {
+    required FormData data,
+    T Function(dynamic)? fromJsonT,
+  }) async {
+    try {
+      final response = await _dio.post(path, data: data);
+      return Result.fromJson(response.data, fromJsonT);
+    } on DioException catch (e) {
+      return _handleDioException(e, fromJsonT);
+    } catch (e) {
+      return Result(
+        code: -1,
+        message: e.toString(),
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+  }
+
   Result<T> _handleDioException<T>(
     DioException e,
     T Function(dynamic)? fromJsonT,

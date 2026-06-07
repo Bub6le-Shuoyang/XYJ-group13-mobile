@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/models/business_models.dart';
 import '../../services/app_data_service.dart';
+import '../../shared/widgets/app_map_tile_layer.dart';
 
 class NearbyStationMapScreen extends StatefulWidget {
   const NearbyStationMapScreen({super.key});
@@ -36,7 +37,7 @@ class _NearbyStationMapScreenState extends State<NearbyStationMapScreen> {
   @override
   Widget build(BuildContext context) {
     final center = _stations.isEmpty
-        ? const LatLng(30.5100, 114.3100)
+        ? const LatLng(39.9499, 116.3420)
         : LatLng(_stations.first.lat, _stations.first.lng);
 
     return Scaffold(
@@ -48,11 +49,7 @@ class _NearbyStationMapScreenState extends State<NearbyStationMapScreen> {
                 FlutterMap(
                   options: MapOptions(initialCenter: center, initialZoom: 14),
                   children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.group13.mobile',
-                    ),
+                    const AppMapTileLayer(),
                     MarkerLayer(
                       markers: _stations
                           .map(

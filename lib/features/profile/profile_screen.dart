@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/models/business_models.dart';
 import '../../services/app_data_service.dart';
 import '../package/state/package_cubit.dart';
@@ -35,6 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _memberLevel = '金牌村民';
   int _monthlySignedCount = 8;
   double _balance = 0;
+  bool _isUploadingAvatar = false;
 
   static const _coverTop = 190.0;
   static const _revealTop = 360.0;
@@ -215,6 +217,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _changeAvatar() async {
+    if (_isUploadingAvatar) {
+      return;
+    }
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 86,
+    );
+    if (image == null) {
+      return;
+    }
+    setState(() => _isUploadingAvatar = true);
+    try {
+      final uploadResult = await _appDataService.uploadAvatar(
+        bytes: await image.readAsBytes(),
+        filename: image.name,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (!uploadResult.isSuccess || uploadResult.data == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(uploadResult.message)));
+        return;
+      }
+      final profileResult = await _appDataService.updateAvatar(
+        uploadResult.data!,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (!profileResult.isSuccess || profileResult.data == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(profileResult.message)));
+        return;
+      }
+      setState(() => _avatarUrl = profileResult.data!.avatarUrl);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('头像已更新')));
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+      }
+    }
+  }
+
+  String _resolveServerUrl(String url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    const origin = 'http://47.95.236.177:7022';
+    final resolvedUrl = url.startsWith('/') ? '$origin$url' : '$origin/$url';
+    return Uri.encodeFull(resolvedUrl);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -288,7 +358,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         IconButton(
                           key: const ValueKey('logout_button'),
                           icon: const Icon(
-                            Icons.settings_outlined,
+                            Icons.logout_rounded,
                             color: Colors.white,
                           ),
                           onPressed: widget.onLogout,
@@ -296,21 +366,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 8,
+                    GestureDetector(
+                      key: const ValueKey('profile_avatar_button'),
+                      onTap: _changeAvatar,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 3),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.white,
+                              backgroundImage: NetworkImage(
+                                _resolveServerUrl(_avatarUrl),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: -2,
+                            bottom: -2,
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.16),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: _isUploadingAvatar
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(7),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.camera_alt_rounded,
+                                      size: 16,
+                                      color: colorScheme.primary,
+                                    ),
+                            ),
                           ),
                         ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 40,
-                        backgroundColor: Colors.white,
-                        backgroundImage: NetworkImage(_avatarUrl),
                       ),
                     ),
                     const SizedBox(height: 12),

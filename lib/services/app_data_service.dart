@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../core/models/business_models.dart';
 import '../core/models/result.dart';
 import '../core/network/api_client.dart';
@@ -69,6 +71,36 @@ class AppDataService {
       code: result.code,
       message: result.message,
       timestamp: result.timestamp,
+    );
+  }
+
+  Future<Result<String>> uploadAvatar({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final result = await _apiClient.postForm<UploadVO>(
+      '/upload',
+      data: FormData.fromMap({
+        'scene': 'avatar',
+        'file': MultipartFile.fromBytes(bytes, filename: filename),
+      }),
+      fromJsonT: (data) => UploadVO.fromJson(data as Map<String, dynamic>),
+    );
+    if (result.isSuccess && result.data != null) {
+      return _success(result.data!.url);
+    }
+    return Result(
+      code: result.code,
+      message: result.message,
+      timestamp: result.timestamp,
+    );
+  }
+
+  Future<Result<UserProfileVO>> updateAvatar(String avatarUrl) {
+    return _apiClient.put<UserProfileVO>(
+      '/user/profile/avatar',
+      data: {'avatar_url': avatarUrl},
+      fromJsonT: (data) => UserProfileVO.fromJson(data as Map<String, dynamic>),
     );
   }
 

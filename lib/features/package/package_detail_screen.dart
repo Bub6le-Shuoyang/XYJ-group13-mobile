@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../../shared/widgets/app_map_tile_layer.dart';
 import 'state/package_state.dart';
 
 class PackageDetailScreen extends StatelessWidget {
@@ -36,11 +37,7 @@ class PackageDetailScreen extends StatelessWidget {
                     initialZoom: 14.0,
                   ),
                   children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.group13.mobile',
-                    ),
+                    const AppMapTileLayer(),
                     MarkerLayer(
                       markers: [
                         Marker(

@@ -163,76 +163,10 @@ class _UserLoginViewState extends State<UserLoginView> {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(child: Divider(color: Colors.grey[200])),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      '其他登录方式',
-                      style: TextStyle(color: Colors.grey[400], fontSize: 13),
-                    ),
-                  ),
-                  Expanded(child: Divider(color: Colors.grey[200])),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _SocialIcon(
-                    icon: Icons.wechat_rounded,
-                    color: const Color(0xFF07C160),
-                    onTap: () => _showPasswordOnlyTip(context),
-                  ),
-                  const SizedBox(width: 32),
-                  _SocialIcon(
-                    icon: Icons.phone_android_rounded,
-                    color: const Color(0xFF1677FF),
-                    onTap: () => _showPasswordOnlyTip(context),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  void _showPasswordOnlyTip(BuildContext context) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('当前仅支持账号密码登录')));
-  }
-}
-
-class _SocialIcon extends StatelessWidget {
-  const _SocialIcon({
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Icon(icon, color: color, size: 26),
-      ),
     );
   }
 }
